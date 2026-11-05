@@ -30,4 +30,7 @@ void ui_app_set_sensor_text(const char *temperature, const char *humidity,
                             const char *pressure, const char *note);
 void ui_app_show(ui_page_t page);
 
+/* 跳过启动页固定 5s 停留（桌面模拟器截图用，固件侧不需要调用） */
+void ui_app_skip_boot(void);
+
 #endif

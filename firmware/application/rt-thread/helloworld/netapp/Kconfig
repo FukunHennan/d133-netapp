@@ -14,4 +14,8 @@ if D133_NETAPP
 config D133_SETUP_PASSWORD
     string "Setup AP WPA2 password (8-63 characters)"
     default "D133setup"
+
+config D133_OTA_TOKEN
+    string "Web OTA password (independent from the setup AP password)"
+    default "D133ota"
 endif

@@ -48,26 +48,26 @@ image_do_upgrade_inner()619: No device is connected
 - 整片重刷可能清掉已保存的 Wi-Fi 凭据，需要重新配网。
 - `rodata.fatfs` 里 7.7 MB 是 SDK `demo_hub` 的 344 个资源文件，netapp 界面不读取；在 defconfig 里关闭 `CONFIG_AIC_USING_FS_IMAGE_0` 可把镜像从 10.9 MB 降到约 3.2 MB，烧录时间也会相应缩短。
 
-## OTA（可选）
+## OTA（封箱后唯一的升级方式）
 
-首次烧录成功以后，OS 升级走局域网：
+首次 USB 烧录成功以后，OS 升级只走局域网，**不需要串口、不需要拆机**：
+
+- 设备联网后，主页右上角显示本机 IP，`http://<设备IP>/` 就是升级页面；
+- 升级口令是独立配置项 `D133_OTA_TOKEN`（默认 `D133ota`，建议按现场改），与配网热点密码分开；
+- 升级包是 `ota.cpio`，**不能**用 `d13x_JLC_v1.1.0.img`（整片镜像只用于 USB）。
 
 ```powershell
 # 1. 电脑起静态服务器（必须提供 Content-Length）
 cd luban-lite\output\d13x_JLC_rt-thread_helloworld_netapp\images
-python -m http.server 8000 --bind <电脑局域网 IP>
+python -m http.server 8001 --bind <电脑局域网 IP>
 
 # 2. 生成可信校验值和命令
-python ..\..\..\tools\netapp\ota_manifest.py --url http://<电脑IP>:8000/ota.cpio ota.cpio
+python ..\..\..\tools\netapp\ota_manifest.py --url http://<电脑IP>:8001/ota.cpio ota.cpio
 ```
 
-设备在线后串口会打印 `Web OTA ready: http://<设备IP>/`，也可以直接在网页里填地址 + 8 位 CRC32 + 口令（默认热点密码）。串口方式：
+设备在线后，浏览器打开 `http://<设备IP>/`，填升级包地址 + 8 位 CRC32 + 口令即可；进度显示在屏幕底部，校验通过后自动重启。
 
-```text
-netapp_ota http://<电脑IP>:8000/ota.cpio <8位CRC32>
-```
-
-> 安全边界：明文 HTTP、无签名、CRC32 只防传输损坏，不防恶意篡改；仅限可信局域网使用。
+> 串口 `netapp_ota` 仍保留，只作为调试备用，不参与封箱部署流程。
 
 ## 常见问题
 

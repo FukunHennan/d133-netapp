@@ -8,7 +8,7 @@
 
 配网页面仅在 AP 模式绑定 192.168.4.1:80；同一阶段在 UDP 53 回答 A/ANY 查询为 192.168.4.1，对手机联网探测 HTTP 请求重定向至配网页面。设备热点的 DHCP 已将 AP 地址作为 DNS 发给客户端。手机是否自动弹出配网页仍取决于系统的探测行为；HTTPS 请求无法被透明重定向。切换 STA 前关闭 HTTP、DNS 和 DHCP 服务。TCP 分片、POST 长度、URL 编码和重复字段均检查。连接并取得 DHCP 地址后，凭据写入 `/data/wifi.cfg`，临时文件 fsync 后 rename；保存失败时保持已建立的连接并输出诊断。不会打印路由器密码。凭据是明文 LittleFS 文件，未实现 Flash 加密。掉线会重新开放配网热点；现有凭据保留到新网络连接且保存成功。
 
-串口 shell 命令 `netapp_setup` 可在在线状态重新打开配网（界面已不提供「重新配网」按钮：连接正常时不需要，掉线时固件会自动开热点进入配网页）；OTA 过程中会拒绝切换网络。屏幕显示当前 Wi-Fi 状态、SSID、热点名称、OTA 阶段/进度/错误，状态由网络和 OTA 线程发布，LVGL 定时器负责刷新。
+串口 shell 命令 `netapp_setup` 可在在线状态重新打开配网（界面已不提供「重新配网」按钮：连接正常时不需要，掉线时固件会先用已保存凭据重试，失败才自动开热点进入配网页）；OTA 过程中会拒绝切换网络。网页 OTA 的升级口令是独立配置项 `D133_OTA_TOKEN`（默认 `D133ota`，与配网热点密码分开），主页右上角常显本机 IP 方便封箱后找到 `http://<IP>/`。屏幕显示当前 Wi-Fi 状态、SSID、热点名称、OTA 阶段/进度/错误，状态由网络和 OTA 线程发布，LVGL 定时器负责刷新。
 
 界面现由 `application/rt-thread/helloworld/netapp/ui/ui_app.c` 手写实现，包含启动、AP 配网和传感器主页，使用 SDK 的 LVGL 9.1。`netapp_ui.c` 将网络状态快照交给界面，配网中显示 AP 页，在线且获得 IP 后显示主页，其余状态显示启动页。手机配网网页在 `application/rt-thread/helloworld/netapp/portal.html` 编辑，运行 `python generate_portal.py` 生成固件内嵌的 `portal_html.h`。扫描在开启 AP 前执行一次；AP 运行时不再发起扫描，以免单无线芯片离开热点信道导致手机断开。RTW 回调不等待互斥锁。若扫描失败，网页仍允许手动输入 SSID。当前传感器驱动尚未接入，主页读数显示 `--`。旧的 `aido_export` 文件保留在工作目录，但不参与编译。SDK 同级的 `lvgl_simulator` 可在电脑上运行三页 LVGL 界面；模拟器的传感器数字是示例数据。
 

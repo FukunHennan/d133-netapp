@@ -35,8 +35,10 @@ int main(int argc, char **argv)
     ui_app_init(demo_setup);
 
     if (!strcmp(page, "ap")) {
+        ui_app_skip_boot();
         ui_app_update(&ap_state);
     } else if (!strcmp(page, "main")) {
+        ui_app_skip_boot();
         state.wifi = "Connected";
         state.ssid = "Home-WiFi";
         state.ip = "192.168.1.106";
@@ -45,6 +47,7 @@ int main(int argc, char **argv)
         ui_app_set_sensor_text("25.6", "68", "101.3", "示例数据");
         ui_app_update(&state);
     } else if (!strcmp(page, "ota")) {
+        ui_app_skip_boot();
         state.wifi = "Connected";
         state.ssid = "Home-WiFi";
         state.ip = "192.168.1.106";

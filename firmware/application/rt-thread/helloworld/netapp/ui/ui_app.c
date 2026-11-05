@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "ui_app.h"
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 
 LV_FONT_DECLARE(ui_font_16);
@@ -21,11 +22,11 @@ LV_FONT_DECLARE(ui_font_36);
 typedef struct {
     lv_obj_t *root;
     lv_obj_t *state;
-    lv_obj_t *detail;
     lv_obj_t *ssid;
     lv_obj_t *password;
     lv_obj_t *ip;
     lv_obj_t *wifi;
+    lv_obj_t *wifi_ip;
     lv_obj_t *ota;
     lv_obj_t *ota_bar;
     lv_obj_t *ota_panel;
@@ -34,11 +35,16 @@ typedef struct {
     lv_obj_t *humidity;
     lv_obj_t *pressure;
     lv_obj_t *sensor_note;
+    lv_obj_t *progress;     /* 启动页进度条填充 */
 } ui_screen_t;
+
+/* 启动页固定显示时长（毫秒），与原型 5s 进度动画一致 */
+#define BOOT_MIN_MS 5000
 
 static ui_screen_t boot, ap, main_page;
 static ui_page_t active_page = UI_PAGE_BOOT;
 static int initialized;
+static bool boot_elapsed;
 
 static lv_color_t color(uint32_t rgb) { return lv_color_hex(rgb); }
 
@@ -89,7 +95,7 @@ static void header(lv_obj_t *root, const char *section)
 {
     box(root, 18, 17, 7, 23, C_CYAN, 0, 3);
     label(root, "衡山派", 34, 13, 126, &ui_font_24, C_WHITE);
-    label(root, section, 300, 20, 160, &ui_font_16, C_MUTED);
+    if (section && *section) label(root, section, 300, 20, 160, &ui_font_16, C_MUTED);
     box(root, 18, 51, 444, 1, C_EDGE, 0, 0);
 }
 
@@ -103,6 +109,7 @@ static const char *wifi_text(const char *s)
     if (!strcmp(s, "Setup AP ready")) return "热点已就绪";
     if (!strcmp(s, "Connected")) return "已连接";
     if (!strcmp(s, "Disconnected")) return "连接已断开";
+    if (!strcmp(s, "Reconnecting")) return "正在重连 Wi-Fi";
     if (!strcmp(s, "Connection failed")) return "连接失败";
     if (!strcmp(s, "DHCP failed")) return "获取地址失败";
     if (!strcmp(s, "Wi-Fi unavailable")) return "无线模块未就绪";
@@ -138,27 +145,82 @@ static const char *error_text(const char *s)
     return s;
 }
 
+/* 空心矩形：只描边不填充，用于图标轮廓 */
+static lv_obj_t *outline(lv_obj_t *parent, int x, int y, int w, int h,
+                         uint32_t border, int radius)
+{
+    lv_obj_t *o = lv_obj_create(parent);
+    lv_obj_set_pos(o, x, y);
+    lv_obj_set_size(o, w, h);
+    lv_obj_set_style_radius(o, radius, 0);
+    lv_obj_set_style_bg_opa(o, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(o, 2, 0);
+    lv_obj_set_style_border_color(o, color(border), 0);
+    lv_obj_set_style_pad_all(o, 0, 0);
+    lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+    return o;
+}
+
+/* CPU 芯片图标：外框 + 内核 + 四边引脚，中心位于 (cx, cy)。
+ * 对应原型中的 Lucide CPU 图标，纯图元绘制，无需图片资源。 */
+static void icon_cpu(lv_obj_t *parent, int cx, int cy)
+{
+    int i, p;
+    outline(parent, cx - 26, cy - 26, 52, 52, C_CYAN, 6);
+    box(parent, cx - 12, cy - 12, 24, 24, C_CYAN, 0, 3);
+    for (i = 0; i < 4; i++) {
+        p = cx - 18 + i * 11;
+        box(parent, p, cy - 34, 3, 8, C_CYAN, 0, 1);   /* 上引脚 */
+        box(parent, p, cy + 26, 3, 8, C_CYAN, 0, 1);   /* 下引脚 */
+        p = cy - 18 + i * 11;
+        box(parent, cx - 34, p, 8, 3, C_CYAN, 0, 1);   /* 左引脚 */
+        box(parent, cx + 26, p, 8, 3, C_CYAN, 0, 1);   /* 右引脚 */
+    }
+}
+
+/* 进度条动画回调：直接把填充条宽度从 0 拉到 229 */
+static void boot_fill_anim(void *var, int32_t width)
+{
+    lv_obj_set_width((lv_obj_t *)var, width);
+}
+
+static void start_boot_animation(void)
+{
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, boot.progress);
+    lv_anim_set_exec_cb(&a, boot_fill_anim);
+    lv_anim_set_values(&a, 0, 229);
+    lv_anim_set_time(&a, BOOT_MIN_MS);
+    lv_anim_set_path_cb(&a, lv_anim_path_linear);
+    lv_anim_start(&a);
+}
+
+static void boot_timer_cb(lv_timer_t *t)
+{
+    boot_elapsed = true;
+    lv_timer_delete(t);
+}
+
 static void create_boot(void)
 {
     lv_obj_t *halo;
     boot.root = page_root();
-    header(boot.root, "设备启动");
+    header(boot.root, "");
+    /* 启动页保持极简：不显示网络阶段文案，避免与固定 5s 进度冲突 */
 
-    halo = box(boot.root, 36, 75, 146, 146, 0x123A5A, C_EDGE, 73);
+    /* 居中圆形底盘 */
+    halo = box(boot.root, 180, 64, 120, 120, 0x123A5A, C_EDGE, 60);
     lv_obj_set_style_bg_grad_color(halo, color(0x0B2545), 0);
     lv_obj_set_style_bg_grad_dir(halo, LV_GRAD_DIR_VER, 0);
-    box(boot.root, 54, 93, 110, 110, 0x0B2441, 0x3381A3, 55);
-    box(boot.root, 94, 131, 30, 30, C_CYAN, 0, 15);
-    box(boot.root, 101, 138, 16, 16, C_WHITE, 0, 8);
-    box(boot.root, 24, 242, 81, 3, C_CYAN, 0, 2);
+    icon_cpu(boot.root, 240, 124);
 
-    label(boot.root, "系统初始化", 212, 79, 238, &ui_font_24, C_WHITE);
-    boot.state = label(boot.root, "正在启动", 212, 119, 243, &ui_font_16, C_CYAN);
-    boot.detail = label(boot.root, "正在检查网络状态", 212, 147, 243, &ui_font_16, C_MUTED);
-    box(boot.root, 212, 183, 229, 5, 0x2B4B67, 0, 3);
-    box(boot.root, 212, 183, 77, 5, C_CYAN, 0, 3);
-    boot.error = label(boot.root, "", 212, 205, 242, &ui_font_16, C_AMBER);
-    label(boot.root, "网络准备完成后自动进入主页", 119, 236, 344, &ui_font_16, C_MUTED);
+    /* 底部：状态文字 + 进度条（轨道 + 填充，纯图元绘制） */
+    boot.state = label(boot.root, "系统初始化", 186, 196, 108, &ui_font_16, C_MUTED);
+    lv_obj_set_style_text_align(boot.state, LV_TEXT_ALIGN_CENTER, 0);
+
+    box(boot.root, 125, 230, 229, 4, 0x2B4B67, 0, 2);
+    boot.progress = box(boot.root, 125, 230, 0, 4, C_CYAN, 0, 2);
 }
 
 static void create_ap(void)
@@ -247,7 +309,9 @@ static void create_main(void)
     header(main_page.root, "传感器状态");
     main_page.wifi = label(main_page.root, "Wi-Fi 已连接", 18, 52, 285,
                            &ui_font_16, C_GREEN);
-    main_page.sensor_note = label(main_page.root, "传感器尚未接入", 311, 52, 148,
+    /* 封箱设备：右上角常显本机 IP，方便在同一局域网里找到 http://<IP>/ 升级页 */
+    main_page.wifi_ip = label(main_page.root, "", 311, 52, 148, &ui_font_16, C_CYAN);
+    main_page.sensor_note = label(main_page.root, "传感器尚未接入", 18, 249, 300,
                                   &ui_font_16, C_MUTED);
 
     sensor_card(main_page.root, 18, "°C", C_AMBER, &main_page.temp, icon_thermometer);
@@ -283,6 +347,11 @@ void ui_app_show(ui_page_t page)
     lv_screen_load(target);
 }
 
+void ui_app_skip_boot(void)
+{
+    boot_elapsed = true;
+}
+
 void ui_app_init(int (*request_setup)(void))
 {
     if (initialized) return;
@@ -294,6 +363,9 @@ void ui_app_init(int (*request_setup)(void))
     create_main();
     initialized = 1;
     lv_screen_load(boot.root);
+    /* 启动页固定 5s：期间进度条匀速填充，到点后才允许切到其它页面 */
+    start_boot_animation();
+    lv_timer_create(boot_timer_cb, BOOT_MIN_MS, NULL);
 }
 
 
@@ -315,14 +387,6 @@ void ui_app_update(const ui_app_status_t *s)
     if (!initialized || !s) return;
     phase = wifi_text(s->wifi);
     problem = error_text(s->error);
-    lv_label_set_text(boot.state, phase);
-    if (s->ssid && *s->ssid) {
-        snprintf(line, sizeof(line), "Wi-Fi: %.32s", s->ssid);
-        lv_label_set_text(boot.detail, line);
-    } else {
-        lv_label_set_text(boot.detail, "正在检查网络状态");
-    }
-    lv_label_set_text(boot.error, problem);
     lv_label_set_text(ap.state, phase);
     lv_label_set_text(ap.ssid, s->ap_ssid && *s->ap_ssid ? s->ap_ssid : "D133-Setup-...");
     lv_label_set_text(ap.password, s->ap_password && *s->ap_password ? s->ap_password : "--");
@@ -351,8 +415,18 @@ void ui_app_update(const ui_app_status_t *s)
         }
     }
     lv_label_set_text(main_page.error, problem);
+    lv_label_set_text(main_page.wifi_ip, s->ip && *s->ip ? s->ip : "");
+    if (problem && *problem) {
+        lv_obj_clear_flag(main_page.error, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(main_page.sensor_note, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(main_page.error, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(main_page.sensor_note, LV_OBJ_FLAG_HIDDEN);
+    }
 
-    if (s->provisioning) ui_app_show(UI_PAGE_AP);
+    /* 启动页固定显示 5s，期间无论网络是否就绪都停留在启动页 */
+    if (!boot_elapsed) ui_app_show(UI_PAGE_BOOT);
+    else if (s->provisioning) ui_app_show(UI_PAGE_AP);
     else if (s->online && s->ip && *s->ip) ui_app_show(UI_PAGE_MAIN);
     else ui_app_show(UI_PAGE_BOOT);
 }

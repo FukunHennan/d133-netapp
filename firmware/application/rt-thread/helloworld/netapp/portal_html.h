@@ -163,7 +163,7 @@ static const char ota_page[] =
     "        <form id=\"ota-form\">\n"
     "          <div class=\"field\"><label for=\"url\">升级包地址（电脑局域网 HTTP 服务）</label><input id=\"url\" name=\"url\" type=\"url\" required autocomplete=\"off\" placeholder=\"http://192.168.1.100:8000/ota.cpio\"></div>\n"
     "          <div class=\"field\"><label for=\"crc\">CRC32（构建机输出的 8 位十六进制）</label><input id=\"crc\" name=\"crc\" required maxlength=\"8\" autocomplete=\"off\" pattern=\"[0-9a-fA-F]{8}\" placeholder=\"例如 13B78827\"></div>\n"
-    "          <div class=\"field\"><label for=\"token\">升级口令（设备热点密码）</label><input id=\"token\" name=\"token\" type=\"password\" required maxlength=\"63\" autocomplete=\"off\" placeholder=\"默认 D133setup\"></div>\n"
+    "          <div class=\"field\"><label for=\"token\">升级口令（D133_OTA_TOKEN）</label><input id=\"token\" name=\"token\" type=\"password\" required maxlength=\"63\" autocomplete=\"off\" placeholder=\"默认 D133ota\"></div>\n"
     "          <button class=\"submit\" id=\"go\" type=\"submit\">开始升级</button>\n"
     "          <p class=\"hint\">升级过程中请勿断电、断网或操作串口。校验失败不会切换启动分区，可直接重试。</p>\n"
     "        </form>\n"

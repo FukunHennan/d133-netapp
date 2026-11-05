@@ -32,6 +32,8 @@ cd d133-netapp
 3. 拷入 `application/rt-thread/helloworld/netapp/`、defconfig、`tools/netapp/`、设计文档、`fonts_src/`；
 4. `-Build` 时直接编译。
 
+封箱部署相关配置都在 defconfig 里：`CONFIG_D133_SETUP_PASSWORD`（配网热点密码）、`CONFIG_D133_OTA_TOKEN`（网页 OTA 口令，与热点密码独立）。
+
 脚本可重复执行：检测到 patch 已应用会自动跳过。
 
 ## 2. 编译

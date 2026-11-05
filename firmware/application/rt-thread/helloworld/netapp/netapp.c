@@ -417,7 +417,7 @@ static int request(int fd, struct credentials *c, int sta)
             char url[256], crc[9], token[64];
             int ret;
             if (netapp_ota_form(buf+header_len, url, crc, token)) { json_reply(fd, 400, 0, "bad form"); return 0; }
-            if (strcmp(token, D133_SETUP_PASSWORD)) { json_reply(fd, 403, 0, "bad token"); return 0; }
+            if (strcmp(token, D133_OTA_TOKEN)) { json_reply(fd, 403, 0, "bad token"); return 0; }
             ret = netapp_ota_start(url, crc);
             if (ret == -RT_EINVAL) { json_reply(fd, 400, 0, "url must start with http:// and crc must be 8 hex digits"); return 0; }
             if (ret == -RT_EBUSY) { json_reply(fd, 409, 0, "device offline or another task is active"); return 0; }
@@ -557,10 +557,11 @@ static int sta_server_open(void)
 static void network_thread(void *arg)
 {
     struct netif *n = RT_NULL;
-    struct credentials c;
+    struct credentials c, saved;
     unsigned i;
-    int configured;
+    int configured, have_saved;
     int default_pending;
+    int retry_left = 0;
     int web = -1;
     (void)arg;
     for (i = 0; i < 30; ++i) {
@@ -569,8 +570,12 @@ static void network_thread(void *arg)
         rt_thread_mdelay(1000);
     }
     if (!n || i == 30) { wifi_status("Wi-Fi unavailable", "", "", "Check RTL8189, SDIO and power", 0); rt_kprintf("[netapp] RTL Wi-Fi not ready; check module, SDIO and power GPIO.\n"); return; }
-    configured = load_credentials(&c) == 0;
+    have_saved = load_credentials(&saved) == 0;
+    c = saved;
+    configured = have_saved;
     default_pending = configured;
+    /* 封箱设备：启动时先多试几次已保存凭据，再回退到默认 SSID / 配网热点 */
+    retry_left = configured ? 3 : 0;
     if (!configured) {
         memset(&c, 0, sizeof(c));
         memcpy(c.magic, "WFI1", 4);
@@ -583,6 +588,12 @@ static void network_thread(void *arg)
         }
         if (join(n, &c)) {
             wifi_status("Connection failed", c.ssid, "", "Wi-Fi authentication or DHCP failed", 0);
+            if (retry_left > 0) {
+                --retry_left;
+                rt_kprintf("[netapp] connect failed, retrying (%d left)...\n", retry_left);
+                rt_thread_mdelay(5000);
+                continue;
+            }
             if (default_pending) {
                 memset(&c, 0, sizeof(c));
                 memcpy(c.magic, "WFI1", 4);
@@ -597,7 +608,10 @@ static void network_thread(void *arg)
         }
         if (!configured && save_credentials(&c))
             rt_kprintf("[netapp] Connected, but credentials could not be saved.\n");
+        saved = c;
+        have_saved = 1;
         default_pending = 0;
+        retry_left = 0;
         {
             char ip[16];
             LOCK_TCPIP_CORE();
@@ -605,8 +619,8 @@ static void network_thread(void *arg)
             UNLOCK_TCPIP_CORE();
             wifi_status("Connected", c.ssid, ip, "", 0);
             web = sta_server_open();
-            if (web < 0) rt_kprintf("[netapp] STA web server unavailable; use serial netapp_ota.\n");
-            else rt_kprintf("[netapp] Web OTA ready: http://%s/ (token: setup password)\n", ip);
+            if (web < 0) rt_kprintf("[netapp] STA web server unavailable; retry later.\n");
+            else rt_kprintf("[netapp] Web OTA ready: http://%s/ (token: D133_OTA_TOKEN)\n", ip);
         }
         memset(&c, 0, sizeof(c));
         rt_mutex_take(&state_lock, RT_WAITING_FOREVER); online = 1; rt_mutex_release(&state_lock);
@@ -632,10 +646,17 @@ static void network_thread(void *arg)
             if (retry) { wifi_status("Disconnected", "", "", "Link lost or setup requested", 0); break; }
         }
         if (web >= 0) { lwip_close(web); web = -1; }
-        /* Explicit provisioning or link loss opens the setup portal. Stored credentials
-         * remain intact until a replacement network has passed DHCP. */
-        configured = 0;
-        memset(&c, 0, sizeof(c));
+        /* 封箱设备：掉线后先用已保存凭据重连，失败多次才打开配网热点；
+         * 已保存凭据保留到新网络通过 DHCP 才覆盖。 */
+        if (have_saved) {
+            c = saved;
+            configured = 1;
+            retry_left = 6;
+            wifi_status("Reconnecting", saved.ssid, "", "Link lost, retrying", 0);
+        } else {
+            configured = 0;
+            memset(&c, 0, sizeof(c));
+        }
     }
 }
 

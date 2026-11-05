@@ -28,7 +28,8 @@ tshell (prio 20, 4 KB) / lwIP TCP (prio 10, 2 KB)
        scan(STA 态，≤10s) → wifi_off → wifi_on(AP) → start_ap → dhcpd_start
        :80 HTTP 配网页 + :53 DNS 应答(192.168.4.1) + HTTP 探测重定向
        收到 POST /wifi → 校验表单 → 回 connecting 页 → 关 socket/DHCPD → join
-  → 在线期间每 1 s 检查链路；掉线自动开热点回配网（串口 netapp_setup 可手动触发），OTA 期间不切换网络
+  → 在线期间每 1 s 检查链路；掉线后先用已保存凭据重试（6 次 × 5 s），
+    仍失败才开热点进入配网页（串口 netapp_setup 可手动触发），OTA 期间不切换网络
 ```
 
 保存：`/data/wifi.cfg`（LittleFS，明文，`magic + ssid + password`），临时文件 fsync 后 rename。**不会打印路由器密码**。
@@ -37,7 +38,7 @@ tshell (prio 20, 4 KB) / lwIP TCP (prio 10, 2 KB)
 
 ```
 网页 POST /ota 或串口 netapp_ota <url> <crc32>
-  → 校验 url/CRC 格式、加锁（要求在线且无其它任务）
+  → 校验 url/CRC 格式、口令（D133_OTA_TOKEN，独立于热点密码）、加锁
   → 读 osAB_now，选非活动分区（A→os_r，B→os）
   → HTTP GET 流式下载（2 KB 缓冲，10 s 超时，总超时 600 s）
   → 边下载边解析 CRC-CPIO：只接受 ota_info.bin + d13x_os.itb 两个条目
@@ -63,7 +64,8 @@ tshell (prio 20, 4 KB) / lwIP TCP (prio 10, 2 KB)
 | LVGL 线程栈 8 KB | `lv_rt_thread_port.c` 用 `LV_MAIN_THREAD_STACK_SIZE=4096*2` 建栈，Kconfig 的 `LPKG_LVGL_THREAD_STACK_SIZE=32768` 未被 v9 port 使用；4 bpp 中文绘制+多页面下有溢出风险，建议改 16–32 KB 并用 `list_thread` 看水位 |
 | LVGL 堆 64 KB | 板端 `lv_conf.h` 未设 `LV_MEM_SIZE`，取 LVGL 默认 64 KB；而 UI 每 500 ms 无条件重设约 10 个 label，`lv_label_set_text` 每次 free+malloc+invalidate → 长期堆碎片/无用重绘。建议同值跳过或改 `lv_label_set_text_static` |
 | 无有效回滚 | bootloader 在 `aic_get_os_to_startup()` 里加载新 OS 后立即清 `upgrade_available`，`bootcount/bootlimit` 永不触发；「能启动但随后崩」只能 USB 重刷 |
-| 掉线不重试凭据 | 链路一断直接开热点等人配网，现场断网需人工干预；建议先对已存凭据重试 N 次 |
+| 死链恢复 | 掉线后用已保存凭据重试 6 次（每次 5 s），启动时重试 3 次，失败才回到配网热点；封箱设备不会因一次瞬断就停在“等人配网” |
+| 设备发现 | 联网后主页右上角常显本机 IP（`http://<IP>/` 即 OTA 页面），无需串口或路由器后台 |
 | 配网页失败路径 | `portal()` 在 bind/listen 失败时直接 return，没有 `wifi_off`，下次会先扫描再关 AP，可能踢掉手机 |
 | rodata 92% | 7.7 MB 是 SDK demo 资源，界面不读；关闭 `CONFIG_AIC_USING_FS_IMAGE_0` 可大幅瘦身 |
 | 色深 | 板端 RGB565 16 bpp（模拟器已对齐），深色渐变仍有轻微色带，属预期 |
