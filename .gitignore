@@ -1,0 +1,24 @@
+# Build outputs
+build/
+output/
+*.o
+*.a
+*.bin
+*.exe
+*.elf
+*.map
+*.bmp
+.sconsign.dblite
+
+# Python
+__pycache__/
+*.pyc
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# luban-lite SDK checkout created by setup.ps1
+/luban-lite/

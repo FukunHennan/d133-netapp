@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071827">
+  <title>衡山派 · 系统升级</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#edfaff;background:#071827}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at 82% 0%,#19486a 0%,transparent 38%),linear-gradient(155deg,#071827,#0b2843 72%,#0d3654);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+    .shell{width:min(100%,460px);margin:0 auto;padding:24px 20px 36px}
+    .brand{display:flex;align-items:center;gap:10px;color:#d9f3ff;font-size:15px;font-weight:700;letter-spacing:.05em}
+    .mark{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#51f0f1,#268ff3);position:relative;box-shadow:0 0 22px #25c9e65c}
+    .mark:after{content:"";position:absolute;left:5px;right:5px;top:10px;height:5px;border-radius:50%;background:#07304e;transform:rotate(-18deg)}
+    .tag{margin-left:auto;color:#8db4cc;font-size:12px;font-weight:500;letter-spacing:0}
+    .hero{padding:39px 2px 31px}
+    .eyebrow{display:flex;align-items:center;gap:8px;color:#51dbe8;font-size:12px;letter-spacing:.14em}
+    .dot{width:7px;height:7px;border-radius:50%;background:#51dbe8;box-shadow:0 0 12px #51dbe8}
+    h1{font-size:clamp(29px,8vw,37px);line-height:1.25;letter-spacing:-.04em;margin:14px 0 11px;font-weight:700}
+    .hero p{font-size:14px;color:#a6c3d5;line-height:1.65;margin:0;max-width:31em}
+    .panel{border:1px solid #3a6580;border-radius:22px;background:linear-gradient(160deg,#173b57ed,#0e2947f2);box-shadow:0 24px 55px #00101f66;overflow:hidden;margin-bottom:18px}
+    .panel-inner{padding:20px}
+    .section-head{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+    .step{font-size:12px;color:#51dbe8;border:1px solid #3a8ea1;border-radius:7px;padding:4px 6px;font-weight:700}
+    h2{font-size:17px;margin:0;font-weight:650}
+    .divider{height:1px;background:#365772;margin:0 -20px 20px}
+    .kv{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:5px 0;color:#a6c3d5}
+    .kv b{color:#edfaff;font-weight:600;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .progress{height:12px;border-radius:7px;background:#0a2340;border:1px solid #365a73;overflow:hidden;margin:10px 0 6px}
+    .progress i{display:block;height:100%;width:0;background:linear-gradient(105deg,#22c6dd,#2d8ff3);transition:width .6s;border-radius:7px}
+    .phase{font-size:13px;color:#8ee7f2;min-height:19px}
+    .error{font-size:13px;color:#ff9d8a;min-height:19px;margin-top:4px}
+    label{display:block;font-size:13px;color:#b2cddd;margin:0 0 7px}
+    input{display:block;width:100%;min-height:47px;padding:10px 13px;border:1px solid #50718a;border-radius:11px;background:#09243f;color:#fff;font:inherit;font-size:15px;outline:none}
+    input:focus{border-color:#56dce9;box-shadow:0 0 0 3px #36d9ec25}
+    .field{margin-bottom:16px}
+    .submit{width:100%;min-height:48px;background:linear-gradient(105deg,#22c6dd,#2d8ff3);border:0;border-radius:12px;color:#04253d;font:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 10px 24px #047ea247}
+    .submit:active{filter:brightness(.9)}
+    .submit:disabled{opacity:.55;cursor:not-allowed}
+    .hint{font-size:12px;color:#8db4cc;line-height:1.6;margin:8px 0 0}
+    .help{padding:16px 20px 18px;background:#09243d7d;border-top:1px solid #355a75;color:#98b7cb;font-size:12px;line-height:1.65}
+    .footer{padding:18px 5px 0;color:#7da2ba;font-size:12px;line-height:1.6}
+    code{color:#7fdce8;word-break:break-all}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="brand"><span class="mark"></span><span>衡山派</span><span class="tag">D133 · 系统升级</span></header>
+    <section class="hero"><div class="eyebrow"><span class="dot"></span>设备已联网 · 开发联调版 OTA</div><h1>从网页<br>升级固件</h1><p>填写升级包地址与构建机计算的 CRC32，设备只写入备用分区，校验全部通过后才会切换启动。</p></section>
+    <section class="panel">
+      <div class="panel-inner">
+        <div class="section-head"><span class="step">01</span><h2>设备与升级状态</h2></div>
+        <div class="kv"><span>Wi-Fi</span><b id="wifi">--</b></div>
+        <div class="kv"><span>IP 地址</span><b id="ip">--</b></div>
+        <div class="kv"><span>OTA 阶段</span><b id="state">--</b></div>
+        <div class="progress"><i id="bar"></i></div>
+        <div class="phase"><span id="pct">0%</span> · <span id="phase">Idle</span></div>
+        <div class="error" id="err"></div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-inner">
+        <div class="section-head"><span class="step">02</span><h2>开始升级</h2></div>
+        <form id="ota-form">
+          <div class="field"><label for="url">升级包地址（电脑局域网 HTTP 服务）</label><input id="url" name="url" type="url" required autocomplete="off" placeholder="http://192.168.1.100:8000/ota.cpio"></div>
+          <div class="field"><label for="crc">CRC32（构建机输出的 8 位十六进制）</label><input id="crc" name="crc" required maxlength="8" autocomplete="off" pattern="[0-9a-fA-F]{8}" placeholder="例如 13B78827"></div>
+          <div class="field"><label for="token">升级口令（设备热点密码）</label><input id="token" name="token" type="password" required maxlength="63" autocomplete="off" placeholder="默认 D133setup"></div>
+          <button class="submit" id="go" type="submit">开始升级</button>
+          <p class="hint">升级过程中请勿断电、断网或操作串口。校验失败不会切换启动分区，可直接重试。</p>
+        </form>
+      </div>
+      <div class="help">准备：运行 <code>build.ps1</code> 得到 <code>ota.cpio</code>；用 <code>ota_manifest.py</code> 打印 CRC32；在 images 目录启动 <code>python -m http.server 8000 --bind 电脑IP</code>。此为开发联调版：无签名验签，仅限可信局域网。</div>
+    </section>
+    <div class="footer">串口等价命令：<code>netapp_ota http://电脑IP:8000/ota.cpio CRC32</code><br>升级只更新 OS 分区，不改动界面资源与数据。</div>
+  </main>
+  <script>
+    var started=false;
+    function text(id,v){document.getElementById(id).textContent=v;}
+    function poll(){
+      fetch('/ota_status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(s){
+        text('wifi',s.wifi+(s.ssid?' · '+s.ssid:''));
+        text('ip',s.ip||'--');
+        text('state',s.online?(s.provisioning?'配网中':'在线'):'离线');
+        text('phase',s.ota);
+        text('pct',s.ota_percent+'%');
+        document.getElementById('bar').style.width=s.ota_percent+'%';
+        text('err',s.error||'');
+        if(s.ota==='Rebooting'){started=true;text('phase','校验通过，设备正在重启…');}
+      }).catch(function(){
+        if(started) text('phase','连接中断，设备可能正在重启…');
+      });
+    }
+    document.getElementById('ota-form').addEventListener('submit',function(e){
+      e.preventDefault();
+      var body=new URLSearchParams();
+      body.set('url',document.getElementById('url').value.trim());
+      body.set('crc',document.getElementById('crc').value.trim());
+      body.set('token',document.getElementById('token').value);
+      var go=document.getElementById('go');
+      go.disabled=true;
+      fetch('/ota',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()})
+        .then(function(r){return r.json();}).then(function(j){
+          if(j.ok){started=true;text('err','');text('phase','已接受，开始下载…');}
+          else text('err',j.error||'请求被拒绝');
+        })
+        .catch(function(){text('err','请求失败，请确认设备在线');})
+        .then(function(){go.disabled=false;poll();});
+    });
+    poll();
+    setInterval(poll,1500);
+  </script>
+</body>
+</html>

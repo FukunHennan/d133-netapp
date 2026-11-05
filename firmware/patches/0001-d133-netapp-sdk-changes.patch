@@ -1,0 +1,134 @@
+diff --git a/application/rt-thread/helloworld/Kconfig b/application/rt-thread/helloworld/Kconfig
+index fd7714a7..8569e4c3 100644
+--- a/application/rt-thread/helloworld/Kconfig
++++ b/application/rt-thread/helloworld/Kconfig
+@@ -1 +1,2 @@
+ source "application/rt-thread/helloworld/user_led/Kconfig"
++source "application/rt-thread/helloworld/netapp/Kconfig"
+diff --git a/application/rt-thread/helloworld/main.c b/application/rt-thread/helloworld/main.c
+index dbd2cd64..9047a250 100644
+--- a/application/rt-thread/helloworld/main.c
++++ b/application/rt-thread/helloworld/main.c
+@@ -7,12 +7,19 @@
+  */
+ 
+ #include <rtthread.h>
++#ifdef D133_NETAPP
++#include "netapp/netapp.h"
++#endif
+ #ifdef RT_USING_ULOG
+ #include <ulog.h>
+ #endif
+ 
+ int main(void)
+ {
++#ifdef D133_NETAPP
++    if (netapp_start() != RT_EOK)
++        rt_kprintf("[netapp] Failed to start network application.\n");
++#endif
+ #ifdef ULOG_USING_FILTER
+     ulog_global_filter_lvl_set(ULOG_OUTPUT_LVL);
+ #endif
+diff --git a/packages/artinchip/lvgl-ui/aic_ui.c b/packages/artinchip/lvgl-ui/aic_ui.c
+index 7cb30b0a..2cbae848 100644
+--- a/packages/artinchip/lvgl-ui/aic_ui.c
++++ b/packages/artinchip/lvgl-ui/aic_ui.c
+@@ -38,6 +38,11 @@ static void use_touch_monkey_test(void)
+ 
+ void aic_ui_init()
+ {
++#ifdef D133_NETAPP
++    extern void netapp_ui_init(void);
++    netapp_ui_init();
++    return;
++#endif
+ /* qc test demo is only for aic internal qc testing, please ignore it. */
+ 
+ #ifdef AIC_LVGL_VSCODE_DEMO
+diff --git a/packages/artinchip/ota/SConscript b/packages/artinchip/ota/SConscript
+index b870191b..8b67727d 100644
+--- a/packages/artinchip/ota/SConscript
++++ b/packages/artinchip/ota/SConscript
+@@ -10,6 +10,9 @@ group = []
+ 
+ if GetDepend('LPKG_USING_OTA_DOWNLOADER'):
+     src = Glob('*.c')
++    if GetDepend('D133_NETAPP'):
++        # The SDK sample bypasses the application's validated OTA path.
++        src = [s for s in src if os.path.basename(str(s)) != 'test_ota.c']
+ 
+     group = DefineGroup('ota', src, depend = [''], CPPPATH = CPPPATH)
+ 
+diff --git a/packages/artinchip/ota/absystem.c b/packages/artinchip/ota/absystem.c
+index db0f0068..ee9a24a6 100644
+--- a/packages/artinchip/ota/absystem.c
++++ b/packages/artinchip/ota/absystem.c
+@@ -195,6 +195,12 @@ int aic_get_data_to_mount(char *target_data)
+ #ifdef RT_USING_DFS_MNTTABLE
+ int aic_absystem_mount_fs(unsigned int prio)
+ {
++#if defined(D133_NETAPP) && defined(LPKG_USING_LITTLEFS)
++    /* JLC's persistent /data is LittleFS, mounted by board mount_table.
++     * Only OS is A/B in this application; do not mount /data a second time as FAT. */
++    if (prio == 1)
++        return 0;
++#endif
+     char target[MOUNT_POINT_NAME_MAX] = {0};
+     enum boot_device boot_dev = aic_get_boot_device();
+ 
+diff --git a/packages/third-party/lwip/lwipopts.h b/packages/third-party/lwip/lwipopts.h
+index 3ef0802c..453a304d 100644
+--- a/packages/third-party/lwip/lwipopts.h
++++ b/packages/third-party/lwip/lwipopts.h
+@@ -9,6 +9,12 @@
+ 
+ #include <rtconfig.h>
+ 
++#ifdef D133_NETAPP
++/* The provisioning listener is reopened after a failed STA connection while
++ * previous HTTP clients can still be in TCP TIME_WAIT. */
++#define SO_REUSE 1
++#endif
++
+ /*
+    -------------- NO SYS --------------
+ */
+diff --git a/target/d13x/JLC/pack/image_cfg.json b/target/d13x/JLC/pack/image_cfg.json
+index bdfb1c07..ddf5e56c 100644
+--- a/target/d13x/JLC/pack/image_cfg.json
++++ b/target/d13x/JLC/pack/image_cfg.json
+@@ -5,8 +5,9 @@
+             "spl":        { "size": "256k" },
+             "env":        { "size": "128k" },
+             "env_r":      { "size": "128k" },
+-            "os":         { "size": "3m" },
+-            "rodata":     { "size": "11m" },
++            "os":         { "size": "3328k" },
++            "os_r":       { "size": "3328k" },
++            "rodata":     { "size": "8m" },
+             "data":       { "size": "1m" }
+         },
+     },
+@@ -14,7 +15,7 @@
+         "info": { // Header information about image
+             "platform": "d13x",
+             "product": "JLC",
+-            "version": "1.0.0",
++            "version": "1.1.0",
+             "media": {
+                 "type": "spi-nor",
+                 "device_id": 0,
+diff --git a/target/d13x/JLC/pack/ota-subimgs.cfg b/target/d13x/JLC/pack/ota-subimgs.cfg
+index 9f52ab40..77ec8465 100644
+--- a/target/d13x/JLC/pack/ota-subimgs.cfg
++++ b/target/d13x/JLC/pack/ota-subimgs.cfg
+@@ -1,8 +1,7 @@
+ [image]
+ size = "";
+-version = "1.0.0";
++version = "1.1.0";
+ 
+ [file]
+ ota_info.bin:file;
+ d13x_os.itb:os;
+-rodata.fatfs:rodata;

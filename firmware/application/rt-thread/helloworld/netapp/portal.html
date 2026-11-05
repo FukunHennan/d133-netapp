@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071827">
+  <title>衡山派 · Wi-Fi 配网</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#edfaff;background:#071827}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at 82% 0%,#19486a 0%,transparent 38%),linear-gradient(155deg,#071827,#0b2843 72%,#0d3654);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+    .shell{width:min(100%,460px);margin:0 auto;padding:24px 20px 36px}
+    .brand{display:flex;align-items:center;gap:10px;color:#d9f3ff;font-size:15px;font-weight:700;letter-spacing:.05em}
+    .mark{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#51f0f1,#268ff3);position:relative;box-shadow:0 0 22px #25c9e65c}
+    .mark:after{content:"";position:absolute;left:5px;right:5px;top:10px;height:5px;border-radius:50%;background:#07304e;transform:rotate(-18deg)}
+    .tag{margin-left:auto;color:#8db4cc;font-size:12px;font-weight:500;letter-spacing:0}
+    .hero{padding:39px 2px 31px}
+    .eyebrow{display:flex;align-items:center;gap:8px;color:#51dbe8;font-size:12px;letter-spacing:.14em}
+    .dot{width:7px;height:7px;border-radius:50%;background:#51dbe8;box-shadow:0 0 12px #51dbe8}
+    h1{font-size:clamp(29px,8vw,37px);line-height:1.25;letter-spacing:-.04em;margin:14px 0 11px;font-weight:700}
+    .hero p{font-size:14px;color:#a6c3d5;line-height:1.65;margin:0;max-width:31em}
+    .panel{border:1px solid #3a6580;border-radius:22px;background:linear-gradient(160deg,#173b57ed,#0e2947f2);box-shadow:0 24px 55px #00101f66;overflow:hidden}
+    .panel-inner{padding:20px}
+    .section-head{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+    .step{font-size:12px;color:#51dbe8;border:1px solid #3a8ea1;border-radius:7px;padding:4px 6px;font-weight:700}
+    h2{font-size:17px;margin:0;font-weight:650}
+    .scan-link{margin-left:auto;color:#68e3ee;text-decoration:none;font-size:13px;padding:6px 0}
+    .scan-link:active{opacity:.65}
+    .scan-note{font-size:12px;color:#9cbad0;line-height:1.4;margin:0 0 10px}
+    .network-list{display:grid;gap:7px;margin-bottom:18px;max-height:176px;overflow-y:auto}
+    .network{width:100%;border:1px solid #365a73;border-radius:12px;background:#102e4c;color:#edfaff;text-align:left;padding:10px 12px;display:flex;align-items:center;gap:11px;font:inherit;font-size:14px;cursor:pointer}
+    .network:focus-visible,.network:active{border-color:#55dce9;outline:none;background:#174766}
+    .wifi-glyph{color:#5cdeec;font-size:20px;line-height:1}
+    .network-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .network-arrow{color:#8bb9d0}
+    .divider{height:1px;background:#365772;margin:0 -20px 20px}
+    label{display:block;font-size:13px;color:#b2cddd;margin:0 0 7px}
+    input{display:block;width:100%;min-height:47px;padding:10px 13px;border:1px solid #50718a;border-radius:11px;background:#09243f;color:#fff;font:inherit;font-size:15px;outline:none}
+    input:focus{border-color:#56dce9;box-shadow:0 0 0 3px #36d9ec25}
+    .field{margin-bottom:16px}
+    .password-wrap{position:relative}
+    .password-wrap input{padding-right:58px}
+    .reveal{position:absolute;right:8px;top:7px;min-height:33px;padding:0 7px;background:none;border:0;color:#7fdce8;font-size:13px}
+    .submit{width:100%;min-height:48px;background:linear-gradient(105deg,#22c6dd,#2d8ff3);border:0;border-radius:12px;color:#04253d;font:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 10px 24px #047ea247}
+    .submit:active{filter:brightness(.9)}
+    .help{padding:16px 20px 18px;background:#09243d7d;border-top:1px solid #355a75;color:#98b7cb;font-size:12px;line-height:1.65}
+    .footer{padding:18px 5px 0;color:#7da2ba;font-size:12px;line-height:1.6}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="brand"><span class="mark"></span><span>衡山派</span><span class="tag">D133 · 网络配置</span></header>
+    <section class="hero"><div class="eyebrow"><span class="dot"></span>设备已进入配网模式</div><h1>让衡山派<br>接入你的网络</h1><p>选择一个 2.4 GHz Wi-Fi，输入密码后设备会自动连接。</p></section>
+    <section class="panel">
+      <div class="panel-inner">
+        <div class="section-head"><span class="step">01</span><h2>选择附近网络</h2></div>
+        <div class="network-list" id="network-list"><!--NETWORKS--></div>
+        <div class="divider"></div>
+        <form method="post" action="/wifi" id="wifi-form">
+          <div class="field"><label for="ssid">Wi-Fi 名称</label><input id="ssid" name="ssid" maxlength="32" value="123456789" required autocomplete="off" placeholder="选择上方网络或手动输入"></div>
+          <div class="field"><label for="password">Wi-Fi 密码</label><div class="password-wrap"><input id="password" name="password" type="password" maxlength="63" value="123456789" autocomplete="new-password" placeholder="至少 8 位，开放网络留空"><button class="reveal" type="button" onclick="togglePassword()">显示</button></div></div>
+          <button class="submit" type="submit">连接到 Wi-Fi</button>
+        </form>
+      </div>
+      <div class="help">附近网络在设备开启热点前扫描。配网时不会再次扫描，以保持热点稳定。列表没有目标网络时可手动输入名称。连接期间手机可能暂时离开设备热点。</div>
+    </section>
+    <div class="footer">手动访问地址：192.168.4.1<br>仅支持 2.4 GHz 网络。</div>
+  </main>
+  <script>
+    function chooseNetwork(button){
+      const ssid=document.getElementById('ssid');
+      const password=document.getElementById('password');
+      if(ssid.value!==button.dataset.ssid) password.value='';
+      ssid.value=button.dataset.ssid;
+      document.querySelectorAll('.network').forEach(item=>item.setAttribute('aria-pressed',item===button?'true':'false'));
+      password.focus();
+    }
+    function togglePassword(){
+      const field=document.getElementById('password');
+      field.type=field.type==='password'?'text':'password';
+      document.querySelector('.reveal').textContent=field.type==='password'?'显示':'隐藏';
+    }
+  </script>
+</body>
+</html>
