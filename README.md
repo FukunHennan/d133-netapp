@@ -63,7 +63,18 @@ cmake --build build --parallel 4
 
 需要 CMake / Ninja / MinGW-w64；LVGL 与 SDL 直接编译 SDK 里自带的源码。详见 **[simulator/README.md](simulator/README.md)**。
 
-### 3. 看手机配网页
+### 3. 看界面
+
+设备三页（启动 / 配网 / 主页）有一个**可标注的 HTML 原型**：`preview/device-ui.html`。
+用浏览器打开后开启「标注模式」，点任意元素即可写修改备注，复制清单就能直接提需求：
+
+```powershell
+start preview\device-ui.html
+```
+
+![设备界面原型](preview/device-ui-preview.png)
+
+手机配网页：
 
 ```powershell
 python preview\preview_portal.py        # 生成 preview\portal-preview.html

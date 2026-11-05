@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>D133 设备界面原型 · 可标注</title>
+<style>
+  @font-face{
+    font-family:'D133Noto';
+    src:url('../fonts_src/_static.ttf') format('truetype');
+    font-weight:400;font-style:normal;font-display:swap;
+  }
+  :root{
+    /* 与 ui_app.c 顶部常量一致（16bpp RGB565 近似值） */
+    --c-bg:#081829; --c-bg2:#0D2A4B; --c-panel:#102C49; --c-panel2:#183956;
+    --c-edge:#345573; --c-white:#F3FAFF; --c-muted:#96B2CA; --c-cyan:#36D9EC;
+    --c-blue:#509BFF; --c-green:#55D9B0; --c-amber:#FFC878;
+    --c-track:#2B4B67; --c-ota-track:#31516B; --c-btn:#155A76; --c-btn-edge:#4AAAC4;
+    --zoom:1.35;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b1220;color:#dfe9f5;
+       font:14px/1.6 "D133Noto","Microsoft YaHei","Noto Sans SC","PingFang SC",sans-serif}
+  header.top{position:sticky;top:0;z-index:50;background:#0e1a2b;border-bottom:1px solid #21354d;
+             display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 18px}
+  header.top h1{font-size:16px;margin:0 12px 0 0;font-weight:600;color:#fff}
+  header.top .hint{color:#8aa4bf;font-size:12px}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+  button{background:#16283d;color:#dfe9f5;border:1px solid #2c4562;border-radius:6px;
+         padding:6px 12px;cursor:pointer;font-size:13px}
+  button:hover{border-color:#36D9EC;color:#fff}
+  button.active{background:#0f6c7e;border-color:#36D9EC;color:#fff}
+  button.primary{background:#155a76;border-color:#4aaac4}
+  select{background:#16283d;color:#dfe9f5;border:1px solid #2c4562;border-radius:6px;padding:5px 8px}
+
+  main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;padding:22px 26px 60px;align-items:start}
+  @media (max-width:1100px){ main{grid-template-columns:1fr} }
+
+  .page-label{font-size:13px;color:#8aa4bf;margin:0 0 8px 2px}
+  .page-label b{color:#36D9EC;font-weight:600}
+  .stage{width:calc(480px * var(--zoom));height:calc(272px * var(--zoom));margin-bottom:26px}
+  .screen{position:relative;width:480px;height:272px;overflow:hidden;
+          border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.55), 0 0 0 1px #1c3350;
+          zoom:var(--zoom);
+          background:linear-gradient(to right,var(--c-bg),var(--c-bg2));
+          font-family:"D133Noto","Microsoft YaHei","Noto Sans SC","PingFang SC",sans-serif;user-select:none}
+
+  .el{position:absolute;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .f16{font-size:16px;line-height:22px}
+  .f24{font-size:24px;line-height:33px}
+  .f36{font-size:36px;line-height:48px}
+  .r2{border-radius:2px} .r3{border-radius:3px} .r8{border-radius:8px}
+  .r12{border-radius:12px} .r15{border-radius:15px} .r16{border-radius:16px}
+  .r17{border-radius:17px} .r34{border-radius:34px} .r55{border-radius:55px} .r73{border-radius:73px}
+
+  /* 标注模式 */
+  body.annotate .screen [data-id]{cursor:crosshair;outline:1px dashed transparent}
+  body.annotate .screen [data-id]:hover{outline:1px dashed rgba(54,217,236,.9);background-image:linear-gradient(rgba(54,217,236,.07),rgba(54,217,236,.07))}
+  .screen [data-id].selected{outline:2px solid #FFC878 !important;background-image:linear-gradient(rgba(255,200,120,.10),rgba(255,200,120,.10))}
+  .screen [data-id].has-note::after{content:"";position:absolute;right:-1px;top:-1px;width:6px;height:6px;border-radius:50%;
+        background:#FFC878;box-shadow:0 0 6px #FFC878}
+
+  aside.panel{background:#0f1c2e;border:1px solid #21354d;border-radius:10px;padding:16px;position:sticky;top:64px}
+  aside.panel h2{font-size:14px;margin:0 0 4px;color:#fff}
+  aside.panel .sub{font-size:12px;color:#8aa4bf;margin:0 0 12px}
+  .sel-box{background:#0b1626;border:1px dashed #2c4562;border-radius:6px;padding:8px 10px;font-size:12px;color:#8aa4bf;margin-bottom:10px;min-height:34px}
+  .sel-box b{color:#36D9EC;font-family:Consolas,monospace}
+  textarea{width:100%;height:64px;background:#0b1626;border:1px solid #2c4562;border-radius:6px;
+           color:#dfe9f5;padding:8px;font:13px/1.5 inherit;resize:vertical}
+  .actions{display:flex;gap:8px;margin:8px 0 14px}
+  .ann{background:#0b1626;border-left:3px solid #FFC878;border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:13px}
+  .ann .id{font-family:Consolas,monospace;font-size:12px;color:#36D9EC}
+  .ann .note{color:#dfe9f5;white-space:pre-wrap;margin-top:2px}
+  .ann button{float:right;padding:0 6px;font-size:12px;line-height:18px;background:transparent;border:none;color:#8aa4bf}
+  .ann button:hover{color:#ff8a8a}
+  .empty{color:#5d7691;font-size:12px}
+  .legend{font-size:12px;color:#8aa4bf;margin-top:10px;border-top:1px solid #21354d;padding-top:10px}
+  .legend code{color:#FFC878;font-family:Consolas,monospace}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>D133 设备界面原型</h1>
+  <span class="hint">480×272 · 16bpp 配色 · 点击元素可标注</span>
+  <div class="toolbar">
+    <button id="btn-annotate">✏️ 标注模式</button>
+    <select id="zoom" title="缩放">
+      <option value="1.0">100%</option>
+      <option value="1.25">125%</option>
+      <option value="1.35" selected>135%</option>
+      <option value="1.5">150%</option>
+      <option value="1.75">175%</option>
+    </select>
+    <button id="btn-copy" class="primary">复制标注清单</button>
+    <button id="btn-clear">清空</button>
+  </div>
+</header>
+
+<main>
+  <section>
+    <p class="page-label"><b>① 启动页</b> — boot.page（开机 / 连接中）</p>
+    <div class="stage"><div class="screen" id="boot">
+      <div class="el" data-id="boot.brand-bar" style="left:18px;top:17px;width:7px;height:23px;background:var(--c-cyan);border-radius:3px"></div>
+      <div class="el f24" data-id="boot.title" style="left:34px;top:13px;width:126px;color:var(--c-white)">衡山派</div>
+      <div class="el f16" data-id="boot.section" style="left:300px;top:20px;width:160px;color:var(--c-muted)">设备启动</div>
+      <div class="el" data-id="boot.divider" style="left:18px;top:51px;width:444px;height:1px;background:var(--c-edge)"></div>
+
+      <div class="el" data-id="boot.halo" style="left:36px;top:75px;width:146px;height:146px;border-radius:73px;border:1px solid var(--c-edge);background:linear-gradient(to bottom,#123A5A,#0B2545)"></div>
+      <div class="el" data-id="boot.halo-inner" style="left:54px;top:93px;width:110px;height:110px;border-radius:55px;border:1px solid #3381A3;background:#0B2441"></div>
+      <div class="el" data-id="boot.dot" style="left:94px;top:131px;width:30px;height:30px;border-radius:15px;background:var(--c-cyan)"></div>
+      <div class="el" data-id="boot.dot-inner" style="left:101px;top:138px;width:16px;height:16px;border-radius:8px;background:var(--c-white)"></div>
+      <div class="el" data-id="boot.accent-bar" style="left:24px;top:242px;width:81px;height:3px;border-radius:2px;background:var(--c-cyan)"></div>
+
+      <div class="el f24" data-id="boot.headline" style="left:212px;top:79px;width:238px;color:var(--c-white)">准备连接</div>
+      <div class="el f16" data-id="boot.state" style="left:212px;top:119px;width:243px;color:var(--c-cyan)">正在连接 Wi-Fi</div>
+      <div class="el f16" data-id="boot.detail" style="left:212px;top:147px;width:243px;color:var(--c-muted)">Wi-Fi: Home-WiFi</div>
+      <div class="el" data-id="boot.progress-track" style="left:212px;top:183px;width:229px;height:5px;border-radius:3px;background:var(--c-track)"></div>
+      <div class="el" data-id="boot.progress-fill" style="left:212px;top:183px;width:77px;height:5px;border-radius:3px;background:var(--c-cyan)"></div>
+      <div class="el f16" data-id="boot.error" style="left:212px;top:205px;width:242px;color:var(--c-amber)"></div>
+      <div class="el f16" data-id="boot.footer" style="left:119px;top:236px;width:344px;color:var(--c-muted)">网络准备完成后自动进入主页</div>
+    </div></div>
+
+    <p class="page-label"><b>② 配网热点页</b> — ap.page（AP 模式）</p>
+    <div class="stage"><div class="screen" id="ap">
+      <div class="el" data-id="ap.brand-bar" style="left:18px;top:17px;width:7px;height:23px;background:var(--c-cyan);border-radius:3px"></div>
+      <div class="el f24" data-id="ap.title" style="left:34px;top:13px;width:126px;color:var(--c-white)">衡山派</div>
+      <div class="el f16" data-id="ap.section" style="left:300px;top:20px;width:160px;color:var(--c-muted)">网络配置</div>
+      <div class="el" data-id="ap.divider" style="left:18px;top:51px;width:444px;height:1px;background:var(--c-edge)"></div>
+
+      <div class="el f24" data-id="ap.headline" style="left:19px;top:65px;width:280px;color:var(--c-white)">连接设备热点</div>
+      <div class="el f16" data-id="ap.state" style="left:19px;top:99px;width:278px;color:var(--c-cyan)">热点已就绪</div>
+
+      <div class="el" data-id="ap.panel-left" style="left:18px;top:132px;width:276px;height:105px;border-radius:16px;border:1px solid var(--c-edge);background:var(--c-panel)"></div>
+      <div class="el" data-id="ap.accent-bar" style="left:33px;top:151px;width:4px;height:68px;border-radius:2px;background:var(--c-cyan)"></div>
+      <div class="el f16" data-id="ap.ssid-label" style="left:48px;top:144px;width:218px;color:var(--c-muted)">热点名称</div>
+      <div class="el f16" data-id="ap.ssid" style="left:48px;top:167px;width:225px;color:var(--c-white)">D133-Setup-A1B2C3</div>
+      <div class="el f16" data-id="ap.password-label" style="left:48px;top:196px;width:95px;color:var(--c-muted)">连接密码</div>
+      <div class="el f16" data-id="ap.password" style="left:142px;top:196px;width:138px;color:var(--c-white)">D133setup</div>
+
+      <div class="el" data-id="ap.panel-right" style="left:307px;top:65px;width:155px;height:172px;border-radius:16px;border:1px solid var(--c-edge);background:var(--c-panel)"></div>
+      <div class="el" data-id="ap.ap-badge" style="left:351px;top:79px;width:68px;height:68px;border-radius:34px;border:1px solid #42A8C7;background:#174D68"></div>
+      <div class="el f24" data-id="ap.ap-text" style="left:367px;top:93px;width:48px;color:var(--c-cyan)">AP</div>
+      <div class="el f16" data-id="ap.ap-hint" style="left:323px;top:161px;width:130px;color:var(--c-white)">手机连接热点</div>
+      <div class="el f16" data-id="ap.ap-hint2" style="left:323px;top:184px;width:130px;color:var(--c-muted)">浏览器打开</div>
+      <div class="el f16" data-id="ap.ip" style="left:323px;top:208px;width:134px;color:var(--c-cyan)">192.168.4.1</div>
+      <div class="el f16" data-id="ap.error" style="left:20px;top:245px;width:440px;color:var(--c-amber)"></div>
+    </div></div>
+
+    <p class="page-label"><b>③ 传感器主页</b> — main.page（联网后）</p>
+    <div class="stage"><div class="screen" id="main">
+      <div class="el" data-id="main.brand-bar" style="left:18px;top:17px;width:7px;height:23px;background:var(--c-cyan);border-radius:3px"></div>
+      <div class="el f24" data-id="main.title" style="left:34px;top:13px;width:126px;color:var(--c-white)">衡山派</div>
+      <div class="el f16" data-id="main.section" style="left:300px;top:20px;width:160px;color:var(--c-muted)">传感器状态</div>
+      <div class="el" data-id="main.divider" style="left:18px;top:51px;width:444px;height:1px;background:var(--c-edge)"></div>
+
+      <div class="el f16" data-id="main.wifi" style="left:18px;top:52px;width:285px;color:var(--c-green)">已连接 Home-WiFi</div>
+      <div class="el f16" data-id="main.sensor-note" style="left:311px;top:52px;width:148px;color:var(--c-muted)">示例数据</div>
+
+      <!-- 温度卡 -->
+      <div class="el" data-id="main.card-temp" style="left:18px;top:77px;width:140px;height:117px;border-radius:17px;border:1px solid var(--c-edge);background:linear-gradient(to bottom,var(--c-panel),#0C2440)"></div>
+      <div class="el" data-id="main.temp-accent" style="left:32px;top:88px;width:32px;height:3px;border-radius:2px;background:var(--c-amber)"></div>
+      <div class="el f16" data-id="main.temp-label" style="left:32px;top:99px;width:112px;color:var(--c-muted)">温度</div>
+      <div class="el f36" data-id="main.temp" style="left:32px;top:123px;width:112px;color:var(--c-white)">25.6</div>
+      <div class="el f16" data-id="main.temp-unit" style="left:32px;top:172px;width:112px;color:var(--c-amber)">°C</div>
+
+      <!-- 湿度卡 -->
+      <div class="el" data-id="main.card-humidity" style="left:170px;top:77px;width:140px;height:117px;border-radius:17px;border:1px solid var(--c-edge);background:linear-gradient(to bottom,var(--c-panel),#0C2440)"></div>
+      <div class="el" data-id="main.humidity-accent" style="left:184px;top:88px;width:32px;height:3px;border-radius:2px;background:var(--c-cyan)"></div>
+      <div class="el f16" data-id="main.humidity-label" style="left:184px;top:99px;width:112px;color:var(--c-muted)">湿度</div>
+      <div class="el f36" data-id="main.humidity" style="left:184px;top:123px;width:112px;color:var(--c-white)">68</div>
+      <div class="el f16" data-id="main.humidity-unit" style="left:184px;top:172px;width:112px;color:var(--c-cyan)">%</div>
+
+      <!-- 气压卡 -->
+      <div class="el" data-id="main.card-pressure" style="left:322px;top:77px;width:140px;height:117px;border-radius:17px;border:1px solid var(--c-edge);background:linear-gradient(to bottom,var(--c-panel),#0C2440)"></div>
+      <div class="el" data-id="main.pressure-accent" style="left:336px;top:88px;width:32px;height:3px;border-radius:2px;background:var(--c-green)"></div>
+      <div class="el f16" data-id="main.pressure-label" style="left:336px;top:99px;width:112px;color:var(--c-muted)">气压</div>
+      <div class="el f36" data-id="main.pressure" style="left:336px;top:123px;width:112px;color:var(--c-white)">101.3</div>
+      <div class="el f16" data-id="main.pressure-unit" style="left:336px;top:172px;width:112px;color:var(--c-green)">kPa</div>
+
+      <!-- OTA 状态条 -->
+      <div class="el" data-id="main.ota-panel" style="left:18px;top:201px;width:322px;height:45px;border-radius:12px;border:1px solid var(--c-edge);background:var(--c-panel2)"></div>
+      <div class="el f16" data-id="main.ota-label" style="left:30px;top:206px;width:88px;color:var(--c-muted)">系统更新</div>
+      <div class="el f16" data-id="main.ota-text" style="left:131px;top:206px;width:194px;color:var(--c-white)">等待更新</div>
+      <div class="el" data-id="main.ota-bar" style="left:30px;top:237px;width:295px;height:4px;border-radius:2px;background:var(--c-ota-track)"></div>
+      <div class="el" data-id="main.ota-fill" style="left:30px;top:237px;width:0;height:4px;border-radius:2px;background:var(--c-cyan)"></div>
+
+      <!-- 重新配网按钮 -->
+      <div class="el" data-id="main.setup-btn" style="left:350px;top:201px;width:112px;height:45px;border-radius:12px;border:1px solid var(--c-btn-edge);background:var(--c-btn)"></div>
+      <div class="el f16" data-id="main.setup-text" style="left:366px;top:214px;width:92px;color:var(--c-white)">重新配网</div>
+      <div class="el f16" data-id="main.error" style="left:18px;top:249px;width:440px;color:var(--c-amber)"></div>
+    </div></div>
+
+    <p class="page-label">手机配网页（不属于 LVGL，仅作对照）：<a href="portal-preview.html" style="color:#36D9EC">preview/portal-preview.html</a></p>
+  </section>
+
+  <aside class="panel">
+    <h2>标注</h2>
+    <p class="sub">打开「标注模式」后点击任意元素 → 写修改说明 → 复制清单发给我。</p>
+    <div class="sel-box" id="sel-box">未选中元素（示例：<b>main.temp</b>）</div>
+    <textarea id="note" placeholder="例如：这个数字再大 4px / 改青色 / 文案改成「室内温度」"></textarea>
+    <div class="actions">
+      <button id="btn-add" class="primary" style="flex:1">添加到清单</button>
+    </div>
+    <div id="ann-list"></div>
+    <div class="legend">
+      可用 ID 即元素上的 <code>data-id</code>（如 <code>main.temp</code>、<code>ap.ssid</code>、<code>boot.state</code>）。<br>
+      标注保存在浏览器本地（localStorage），刷新不丢。
+    </div>
+    <div class="legend">
+      <b style="color:#ffd28a">板端差异</b>：真机传感器未接入时主页显示 <code>--</code>、右上角为「传感器尚未接入」；本页用模拟器假数据 25.6 / 68 / 101.3。
+    </div>
+  </aside>
+</main>
+
+<script>
+(function(){
+  const KEY = 'd133-ui-annotations-v1';
+  let anns = [];
+  try { anns = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e) { anns = []; }
+  let selected = null;
+  let annotate = false;
+
+  const selBox = document.getElementById('sel-box');
+  const noteEl = document.getElementById('note');
+  const listEl = document.getElementById('ann-list');
+  const btnAnno = document.getElementById('btn-annotate');
+
+  function save(){ localStorage.setItem(KEY, JSON.stringify(anns)); }
+
+  function selectorOf(el){
+    const id = el.getAttribute('data-id');
+    const screen = el.closest('.screen').id;
+    return { id, screen };
+  }
+
+  function render(){
+    listEl.innerHTML = '';
+    if (!anns.length) { listEl.innerHTML = '<p class="empty">还没有标注。</p>'; return; }
+    anns.forEach((a, i) => {
+      const d = document.createElement('div');
+      d.className = 'ann';
+      d.innerHTML = '<button title="删除" data-i="' + i + '">✕</button>' +
+        '<div class="id">' + a.screen + ' · ' + a.id + '</div>' +
+        '<div class="note"></div>';
+      d.querySelector('.note').textContent = a.note;
+      d.querySelector('button').onclick = (ev) => { ev.stopPropagation(); anns.splice(i,1); save(); render(); };
+      listEl.appendChild(d);
+    });
+    // 给有标注的元素打点
+    document.querySelectorAll('.screen [data-id]').forEach(el => {
+      const s = selectorOf(el);
+      el.classList.toggle('has-note', anns.some(a => a.id === s.id && a.screen === s.screen));
+    });
+  }
+
+  function select(el){
+    if (selected) selected.classList.remove('selected');
+    selected = el;
+    if (!el) { selBox.textContent = '未选中元素（示例：main.temp）'; return; }
+    el.classList.add('selected');
+    const s = selectorOf(el);
+    selBox.innerHTML = '已选中：<b>' + s.screen + ' · ' + s.id + '</b>';
+    noteEl.focus();
+  }
+
+  document.querySelectorAll('.screen [data-id]').forEach(el => {
+    el.addEventListener('click', function(ev){
+      if (!annotate) return;
+      ev.stopPropagation();
+      select(el);
+    });
+  });
+
+  btnAnno.onclick = function(){
+    annotate = !annotate;
+    document.body.classList.toggle('annotate', annotate);
+    btnAnno.classList.toggle('active', annotate);
+    btnAnno.textContent = annotate ? '✏️ 标注模式（开）' : '✏️ 标注模式';
+    if (!annotate) select(null);
+  };
+
+  document.getElementById('btn-add').onclick = function(){
+    if (!selected) { alert('先点选一个元素'); return; }
+    const note = noteEl.value.trim();
+    if (!note) { alert('写点修改说明'); return; }
+    const s = selectorOf(selected);
+    anns.push({ screen: s.screen, id: s.id, note: note });
+    noteEl.value = '';
+    save(); render();
+  };
+
+  document.getElementById('btn-copy').onclick = async function(){
+    if (!anns.length) { alert('还没有标注'); return; }
+    const text = anns.map((a,i) => (i+1) + '. [' + a.screen + '] ' + a.id + '：' + a.note).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      this.textContent = '已复制 ✓';
+      setTimeout(() => this.textContent = '复制标注清单', 1500);
+    } catch(e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      this.textContent = '已复制 ✓';
+      setTimeout(() => this.textContent = '复制标注清单', 1500);
+    }
+  };
+
+  document.getElementById('btn-clear').onclick = function(){
+    if (!anns.length || !confirm('删除全部标注？')) return;
+    anns = []; save(); render();
+  };
+
+  document.getElementById('zoom').onchange = function(){
+    document.documentElement.style.setProperty('--zoom', this.value);
+  };
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') select(null); });
+
+  render();
+})();
+</script>
+</body>
+</html>
