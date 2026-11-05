@@ -33,7 +33,18 @@
   select{background:#16283d;color:#dfe9f5;border:1px solid #2c4562;border-radius:6px;padding:5px 8px}
 
   main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;padding:22px 26px 60px;align-items:start}
-  @media (max-width:1100px){ main{grid-template-columns:1fr} }
+  @media (max-width:1100px){
+    :root{--zoom:1}
+    main{grid-template-columns:1fr;padding:12px 12px 24px}
+    .stage{margin:0 auto 14px}
+    aside.panel{position:fixed;left:8px;right:8px;bottom:8px;z-index:60;max-height:48vh;overflow:auto;
+                border-radius:12px;box-shadow:0 -8px 28px rgba(0,0,0,.6);display:none}
+    body.panel-open aside.panel{display:block}
+    body.panel-open main{padding-bottom:52vh}
+    header.top{padding:8px 12px}
+    header.top h1{font-size:14px}
+    header.top .hint{display:none}
+  }
 
   .page-label{font-size:13px;color:#8aa4bf;margin:0 0 8px 2px}
   .page-label b{color:#36D9EC;font-weight:600}
@@ -84,6 +95,7 @@
   <span class="hint">480×272 · 16bpp 配色 · 点击元素可标注</span>
   <div class="toolbar">
     <button id="btn-annotate">✏️ 标注模式</button>
+    <button id="btn-panel">📝 标注栏</button>
     <select id="zoom" title="缩放">
       <option value="1.0">100%</option>
       <option value="1.25">125%</option>
@@ -260,6 +272,7 @@
     el.classList.add('selected');
     const s = selectorOf(el);
     selBox.innerHTML = '已选中：<b>' + s.screen + ' · ' + s.id + '</b>';
+    document.body.classList.add('panel-open');   // 窄窗口（侧边栏）时自动展开标注栏
     noteEl.focus();
   }
 
@@ -277,6 +290,10 @@
     btnAnno.classList.toggle('active', annotate);
     btnAnno.textContent = annotate ? '✏️ 标注模式（开）' : '✏️ 标注模式';
     if (!annotate) select(null);
+  };
+
+  document.getElementById('btn-panel').onclick = function(){
+    document.body.classList.toggle('panel-open');
   };
 
   document.getElementById('btn-add').onclick = function(){
@@ -313,6 +330,8 @@
   document.getElementById('zoom').onchange = function(){
     document.documentElement.style.setProperty('--zoom', this.value);
   };
+  // 窄窗口（侧边栏）默认 100%，并同步下拉框显示
+  if (window.innerWidth <= 1100) document.getElementById('zoom').value = '1.0';
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') select(null); });
 
