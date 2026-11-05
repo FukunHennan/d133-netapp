@@ -9,6 +9,7 @@
 | `portal-preview.html` | 手机配网页，由 `portal.html` 注入假扫描列表生成的独立页面 |
 | `portal-mobile.png` | 手机视图下的渲染截图 |
 | `preview_portal.py` | 生成 `portal-preview.html` 的脚本 |
+| `serve.py` | 本地预览服务器：`http://127.0.0.1:8000/device-ui.html`（同时提供字体/资源相对路径） |
 | `design/` | 早期设计稿（`ap-repair-r85.png` 等），与当前实现有差异，仅作历史参考 |
 
 ## 设备界面怎么用（推荐给我提需求的方式）
@@ -23,6 +24,21 @@
 每个元素都有 `data-id`：`boot.state`、`ap.ssid`、`ap.ip`、`main.temp`、`main.temp-unit`、`main.ota-text`、`main.setup-btn` …… 也可以不用标注模式，直接说“把 `main.temp` 的字号加大”这种描述。
 
 > 该文件是纯静态 HTML（无外部依赖），字体直接引用 `fonts_src/_static.ttf`；缩放、标注记录（localStorage）都在本地，不会上传。
+
+## 本地 HTTP 预览（浏览器可当侧栏页面用）
+
+```powershell
+python preview\serve.py                 # 前台运行，Ctrl+C 停止
+```
+
+然后打开：
+
+- <http://127.0.0.1:8000/device-ui.html> —— 设备三页原型
+- <http://127.0.0.1:8000/portal-preview.html> —— 手机配网页
+- <http://127.0.0.1:8000/> —— 默认跳到 device-ui.html
+
+只监听 `127.0.0.1`，局域网设备访问不到；需要手机/其他机器查看时加 `--host 0.0.0.0`。
+服务以仓库根目录为站点根，所以页面里 `../fonts_src/_static.ttf` 这类相对路径能直接命中。
 
 ## 可编辑的源在哪
 
