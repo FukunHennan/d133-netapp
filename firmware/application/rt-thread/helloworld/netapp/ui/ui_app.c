@@ -28,6 +28,7 @@ typedef struct {
     lv_obj_t *wifi;
     lv_obj_t *ota;
     lv_obj_t *ota_bar;
+    lv_obj_t *ota_panel;
     lv_obj_t *error;
     lv_obj_t *temp;
     lv_obj_t *humidity;
@@ -36,10 +37,8 @@ typedef struct {
 } ui_screen_t;
 
 static ui_screen_t boot, ap, main_page;
-static int (*setup_action)(void);
 static ui_page_t active_page = UI_PAGE_BOOT;
 static int initialized;
-static int setup_pending;
 
 static lv_color_t color(uint32_t rgb) { return lv_color_hex(rgb); }
 
@@ -153,7 +152,7 @@ static void create_boot(void)
     box(boot.root, 101, 138, 16, 16, C_WHITE, 0, 8);
     box(boot.root, 24, 242, 81, 3, C_CYAN, 0, 2);
 
-    label(boot.root, "准备连接", 212, 79, 238, &ui_font_24, C_WHITE);
+    label(boot.root, "系统初始化", 212, 79, 238, &ui_font_24, C_WHITE);
     boot.state = label(boot.root, "正在启动", 212, 119, 243, &ui_font_16, C_CYAN);
     boot.detail = label(boot.root, "正在检查网络状态", 212, 147, 243, &ui_font_16, C_MUTED);
     box(boot.root, 212, 183, 229, 5, 0x2B4B67, 0, 3);
@@ -186,35 +185,64 @@ static void create_ap(void)
     ap.error = label(ap.root, "", 20, 245, 440, &ui_font_16, C_AMBER);
 }
 
-static void sensor_card(lv_obj_t *root, int x, const char *name, const char *unit,
-                        uint32_t accent, lv_obj_t **value)
+/* 传感器图标：用 LVGL 基础图元绘制，不依赖图片资源和符号字体。 */
+static void icon_thermometer(lv_obj_t *card, uint32_t accent)
+{
+    box(card, 24, 11, 4, 16, accent, 0, 2);       /* 液柱 */
+    box(card, 19, 24, 14, 14, accent, 0, 7);      /* 球泡 */
+}
+
+static lv_point_precise_t drop_pts[] = {
+    {26, 10}, {30, 15}, {33, 20}, {33, 25}, {30, 31}, {26, 34},
+    {22, 31}, {19, 25}, {19, 20}, {22, 15}, {26, 10}
+};
+
+static void icon_humidity(lv_obj_t *card, uint32_t accent)
+{
+    lv_obj_t *line = lv_line_create(card);
+    lv_line_set_points(line, drop_pts, sizeof(drop_pts) / sizeof(drop_pts[0]));
+    lv_obj_set_style_line_width(line, 2, 0);
+    lv_obj_set_style_line_color(line, color(accent), 0);
+    lv_obj_set_style_line_rounded(line, true, 0);
+}
+
+static lv_point_precise_t gauge_needle[] = {{26, 24}, {33, 16}};
+
+static void icon_pressure(lv_obj_t *card, uint32_t accent)
+{
+    lv_obj_t *arc = lv_arc_create(card);
+    lv_obj_set_pos(arc, 14, 12);
+    lv_obj_set_size(arc, 24, 24);
+    lv_arc_set_bg_angles(arc, 135, 405);
+    lv_arc_set_angles(arc, 135, 405);
+    lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
+    lv_obj_clear_flag(arc, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_arc_width(arc, 2, LV_PART_MAIN);
+    lv_obj_set_style_arc_color(arc, color(C_EDGE), LV_PART_MAIN);
+    lv_obj_set_style_arc_width(arc, 2, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(arc, color(accent), LV_PART_INDICATOR);
+
+    lv_obj_t *needle = lv_line_create(card);
+    lv_line_set_points(needle, gauge_needle, sizeof(gauge_needle) / sizeof(gauge_needle[0]));
+    lv_obj_set_style_line_width(needle, 2, 0);
+    lv_obj_set_style_line_color(needle, color(accent), 0);
+    lv_obj_set_style_line_rounded(needle, true, 0);
+}
+
+static void sensor_card(lv_obj_t *root, int x, const char *unit, uint32_t accent,
+                        lv_obj_t **value, void (*draw_icon)(lv_obj_t *, uint32_t))
 {
     lv_obj_t *card = box(root, x, 77, 140, 117, C_PANEL, C_EDGE, 17);
     lv_obj_set_style_bg_grad_color(card, color(0x0C2440), 0);
     lv_obj_set_style_bg_grad_dir(card, LV_GRAD_DIR_VER, 0);
-    box(card, 14, 11, 32, 3, accent, 0, 2);
-    label(card, name, 14, 22, 112, &ui_font_16, C_MUTED);
+    draw_icon(card, accent);
     *value = label(card, "--", 14, 46, 112, &ui_font_36, C_WHITE);
     label(card, unit, 14, 95, 112, &ui_font_16, accent);
 }
 
-static void setup_clicked(lv_event_t *event)
-{
-    (void)event;
-    if (!setup_action) return;
-    if (setup_action() == 0) {
-        if (active_page == UI_PAGE_AP) return;
-        setup_pending = 1;
-        lv_label_set_text(boot.state, "正在切换到配网模式");
-        ui_app_show(UI_PAGE_BOOT);
-    } else {
-        lv_label_set_text(main_page.error, "当前无法开启配网");
-    }
-}
-
 static void create_main(void)
 {
-    lv_obj_t *status, *setup;
+    lv_obj_t *status;
     main_page.root = page_root();
     header(main_page.root, "传感器状态");
     main_page.wifi = label(main_page.root, "Wi-Fi 已连接", 18, 52, 285,
@@ -222,25 +250,24 @@ static void create_main(void)
     main_page.sensor_note = label(main_page.root, "传感器尚未接入", 311, 52, 148,
                                   &ui_font_16, C_MUTED);
 
-    sensor_card(main_page.root, 18, "温度", "°C", C_AMBER, &main_page.temp);
-    sensor_card(main_page.root, 170, "湿度", "%", C_CYAN, &main_page.humidity);
-    sensor_card(main_page.root, 322, "气压", "kPa", C_GREEN, &main_page.pressure);
+    sensor_card(main_page.root, 18, "°C", C_AMBER, &main_page.temp, icon_thermometer);
+    sensor_card(main_page.root, 170, "%", C_CYAN, &main_page.humidity, icon_humidity);
+    sensor_card(main_page.root, 322, "kPa", C_GREEN, &main_page.pressure, icon_pressure);
 
-    status = box(main_page.root, 18, 201, 322, 45, C_PANEL2, C_EDGE, 12);
+    /* OTA 进度条：默认隐藏，只在升级过程中出现（见 ui_app_update） */
+    status = box(main_page.root, 18, 201, 444, 45, C_PANEL2, C_EDGE, 12);
+    main_page.ota_panel = status;
+    lv_obj_add_flag(status, LV_OBJ_FLAG_HIDDEN);
     label(status, "系统更新", 12, 5, 88, &ui_font_16, C_MUTED);
-    main_page.ota = label(status, "等待更新", 113, 5, 194, &ui_font_16, C_WHITE);
+    main_page.ota = label(status, "等待更新", 113, 5, 300, &ui_font_16, C_WHITE);
     main_page.ota_bar = lv_bar_create(status);
     lv_obj_set_pos(main_page.ota_bar, 12, 36);
-    lv_obj_set_size(main_page.ota_bar, 295, 4);
+    lv_obj_set_size(main_page.ota_bar, 420, 4);
     lv_bar_set_range(main_page.ota_bar, 0, 100);
     lv_bar_set_value(main_page.ota_bar, 0, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(main_page.ota_bar, color(0x31516B), LV_PART_MAIN);
     lv_obj_set_style_bg_color(main_page.ota_bar, color(C_CYAN), LV_PART_INDICATOR);
 
-    setup = box(main_page.root, 350, 201, 112, 45, 0x155A76, 0x4AAAC4, 12);
-    lv_obj_add_flag(setup, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(setup, setup_clicked, LV_EVENT_CLICKED, NULL);
-    label(setup, "重新配网", 16, 13, 92, &ui_font_16, C_WHITE);
     main_page.error = label(main_page.root, "", 18, 249, 440, &ui_font_16, C_AMBER);
 }
 
@@ -259,7 +286,9 @@ void ui_app_show(ui_page_t page)
 void ui_app_init(int (*request_setup)(void))
 {
     if (initialized) return;
-    setup_action = request_setup;
+    /* 主页不再放「重新配网」按钮：掉线后固件会自动开热点进入配网页；
+     * 手动重新配网仍可用串口命令 netapp_setup。回调参数保留以兼容现有接口。 */
+    (void)request_setup;
     create_boot();
     create_ap();
     create_main();
@@ -287,9 +316,6 @@ void ui_app_update(const ui_app_status_t *s)
     phase = wifi_text(s->wifi);
     problem = error_text(s->error);
     lv_label_set_text(boot.state, phase);
-    if (setup_pending && s->provisioning) setup_pending = 0;
-    if (setup_pending && s->wifi && !strcmp(s->wifi, "Setup AP failed")) setup_pending = 0;
-    if (setup_pending) lv_label_set_text(boot.state, "正在切换到配网模式");
     if (s->ssid && *s->ssid) {
         snprintf(line, sizeof(line), "Wi-Fi: %.32s", s->ssid);
         lv_label_set_text(boot.detail, line);
@@ -308,12 +334,25 @@ void ui_app_update(const ui_app_status_t *s)
     } else {
         lv_label_set_text(main_page.wifi, "Wi-Fi 已连接");
     }
-    lv_label_set_text(main_page.ota, ota_text(s->ota));
-    lv_bar_set_value(main_page.ota_bar, s->ota_percent > 100 ? 100 : s->ota_percent, LV_ANIM_OFF);
+    /* OTA 面板默认隐藏；只有升级任务存在时才展开并显示进度条 */
+    {
+        unsigned percent = s->ota_percent > 100 ? 100 : s->ota_percent;
+        int ota_active = s->ota && s->ota[0] && strcmp(s->ota, "Idle") != 0;
+        if (ota_active) {
+            char ota_line[48];
+            snprintf(ota_line, sizeof(ota_line), "%s %u%%", ota_text(s->ota), percent);
+            lv_label_set_text(main_page.ota, ota_line);
+            lv_bar_set_value(main_page.ota_bar, percent, LV_ANIM_OFF);
+            lv_obj_clear_flag(main_page.ota_panel, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_label_set_text(main_page.ota, ota_text(s->ota));
+            lv_bar_set_value(main_page.ota_bar, 0, LV_ANIM_OFF);
+            lv_obj_add_flag(main_page.ota_panel, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
     lv_label_set_text(main_page.error, problem);
 
     if (s->provisioning) ui_app_show(UI_PAGE_AP);
-    else if (setup_pending) ui_app_show(UI_PAGE_BOOT);
     else if (s->online && s->ip && *s->ip) ui_app_show(UI_PAGE_MAIN);
     else ui_app_show(UI_PAGE_BOOT);
 }

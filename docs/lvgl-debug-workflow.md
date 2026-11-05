@@ -22,7 +22,7 @@ cmake --build build --parallel 4
 .\build\d133_preview.exe --page main
 ```
 
-窗口 480×272，鼠标点击当触摸，用来验证「重新配网」按钮这类交互。`main.c` 里的网络和传感器数值是示例数据，只为把三页填满；板子上走 `netapp_get_status()`，传感器在驱动接入前显示 `--`。
+窗口 480×272，鼠标点击当触摸，用来验证页面切换、OTA 进度条这类交互。`main.c` 里的网络和传感器数值是示例数据，只为把三页填满；板子上走 `netapp_get_status()`，传感器在驱动接入前显示 `--`。加 `--page ota` 可预览升级中的进度条。
 
 **颜色深度必须与板端一致（16 bpp）**：`simulator/lv_conf.h` 里 `LV_COLOR_DEPTH 16`，`CMakeLists.txt` 里 `CACHE_LINE_SIZE=32`。用 32 bpp 预览会掩盖板端 RGB565 的渐变色带。
 
@@ -56,7 +56,7 @@ python firmware\application\rt-thread\helloworld\netapp\ui\generate_fonts.py
 
 - `netapp_ui.c` 建一个 500 ms 的 `lv_timer`，每次取网络和 OTA 状态快照调 `ui_app_update()`：配网中显示 AP 页，在线且拿到 IP 显示主页，其余显示启动页。
 - 界面刷新只在 LVGL 线程，业务线程只发布状态。出现卡顿或撕裂先查是不是从别的线程直接调了 `ui_app_*`。
-- 串口 shell 的 `netapp_setup` 等价于界面上的「重新配网」按钮，OTA 过程中会被拒绝。
+- 串口 shell 的 `netapp_setup` 可在在线状态手动重新打开配网（界面上不再放「重新配网」按钮，掉线时固件会自动开热点进入配网页），OTA 过程中会被拒绝。
 - 主页读数 `--` 是传感器驱动未接入的预期状态，不是渲染问题。
 
 ## 6. 固件编译与烧录

@@ -53,7 +53,15 @@ def main() -> int:
     sources = [here / "ui_app.c"]
     if args.sim_main:
         sources.append(Path(args.sim_main))
-    text = "".join(p.read_text(encoding="utf-8") for p in sources if p.exists())
+
+    # 只扫描字符串字面量：注释里的中文不应进入字库，否则字库会被注释撑大
+    def string_literals(path: Path) -> str:
+        if not path.exists():
+            return ""
+        return "".join(m.group(1) for m in
+                       re.finditer(r'"((?:[^"\\]|\\.)*)"', path.read_text(encoding="utf-8")))
+
+    text = "".join(string_literals(p) for p in sources)
 
     # Han, CJK punctuation, full-width forms, degree sign and U+2103 DEGREE CELSIUS
     cjk = "".join(sorted(set(re.findall(

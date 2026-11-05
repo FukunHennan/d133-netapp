@@ -3,14 +3,14 @@
 衡山派 **D133EBS**（ArtInChip D13x，RISC-V，16 MiB NOR / 8 MiB PSRAM，480×272 RGB565 + GT911 触摸，RTL8189 SDIO Wi-Fi）上的一个完整小产品原型：
 
 1. 开机自动连接已保存的 Wi-Fi，失败时开 **手机热点配网页**（`http://192.168.4.1/`），保存凭据后联网；
-2. 三页 LVGL 9.1 界面（启动 / 配网 / 传感器主页），带「重新配网」按钮；
+2. 三页 LVGL 9.1 界面（启动 / 配网 / 传感器主页）：传感器用图标+大号读数展示，OTA 只在升级过程中于底部弹出进度条；
 3. 局域网 **网页 OTA**（只升级 OS，A/B 双分区，CRC32 + CPIO + 回读校验）；
 4. 电脑上可跑同一份界面的 **LVGL 桌面模拟器** 和无窗口截图；
 5. 手机配网页的 **独立 HTML 预览**。
 
-| 启动页 | 配网页 | 主页 |
-|---|---|---|
-| ![](simulator/screenshots/boot.png) | ![](simulator/screenshots/ap.png) | ![](simulator/screenshots/verify-main.png) |
+| 启动页 | 配网页 | 主页 | OTA 升级中 |
+|---|---|---|---|
+| ![](simulator/screenshots/boot.png) | ![](simulator/screenshots/ap.png) | ![](simulator/screenshots/main.png) | ![](simulator/screenshots/ota.png) |
 
 | 手机配网页（预览） | 早期设计稿（未落地） |
 |---|---|

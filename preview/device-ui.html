@@ -96,6 +96,7 @@
   <div class="toolbar">
     <button id="btn-annotate">✏️ 标注模式</button>
     <button id="btn-panel">📝 标注栏</button>
+    <button id="btn-ota">⬇️ OTA 演示</button>
     <select id="zoom" title="缩放">
       <option value="1.0">100%</option>
       <option value="1.25">125%</option>
@@ -123,7 +124,7 @@
       <div class="el" data-id="boot.dot-inner" style="left:101px;top:138px;width:16px;height:16px;border-radius:8px;background:var(--c-white)"></div>
       <div class="el" data-id="boot.accent-bar" style="left:24px;top:242px;width:81px;height:3px;border-radius:2px;background:var(--c-cyan)"></div>
 
-      <div class="el f24" data-id="boot.headline" style="left:212px;top:79px;width:238px;color:var(--c-white)">准备连接</div>
+      <div class="el f24" data-id="boot.headline" style="left:212px;top:79px;width:238px;color:var(--c-white)">系统初始化</div>
       <div class="el f16" data-id="boot.state" style="left:212px;top:119px;width:243px;color:var(--c-cyan)">正在连接 Wi-Fi</div>
       <div class="el f16" data-id="boot.detail" style="left:212px;top:147px;width:243px;color:var(--c-muted)">Wi-Fi: Home-WiFi</div>
       <div class="el" data-id="boot.progress-track" style="left:212px;top:183px;width:229px;height:5px;border-radius:3px;background:var(--c-track)"></div>
@@ -170,35 +171,39 @@
 
       <!-- 温度卡 -->
       <div class="el" data-id="main.card-temp" style="left:18px;top:77px;width:140px;height:117px;border-radius:17px;border:1px solid var(--c-edge);background:linear-gradient(to bottom,var(--c-panel),#0C2440)"></div>
-      <div class="el" data-id="main.temp-accent" style="left:32px;top:88px;width:32px;height:3px;border-radius:2px;background:var(--c-amber)"></div>
-      <div class="el f16" data-id="main.temp-label" style="left:32px;top:99px;width:112px;color:var(--c-muted)">温度</div>
+      <svg class="el" data-id="main.temp-icon" style="left:37px;top:88px;width:24px;height:28px" viewBox="0 0 24 28" fill="var(--c-amber)">
+        <rect x="5" y="0" width="4" height="16" rx="2"/><circle cx="7" cy="20" r="7"/>
+      </svg>
       <div class="el f36" data-id="main.temp" style="left:32px;top:123px;width:112px;color:var(--c-white)">25.6</div>
       <div class="el f16" data-id="main.temp-unit" style="left:32px;top:172px;width:112px;color:var(--c-amber)">°C</div>
 
       <!-- 湿度卡 -->
       <div class="el" data-id="main.card-humidity" style="left:170px;top:77px;width:140px;height:117px;border-radius:17px;border:1px solid var(--c-edge);background:linear-gradient(to bottom,var(--c-panel),#0C2440)"></div>
-      <div class="el" data-id="main.humidity-accent" style="left:184px;top:88px;width:32px;height:3px;border-radius:2px;background:var(--c-cyan)"></div>
-      <div class="el f16" data-id="main.humidity-label" style="left:184px;top:99px;width:112px;color:var(--c-muted)">湿度</div>
+      <svg class="el" data-id="main.humidity-icon" style="left:189px;top:86px;width:24px;height:24px" viewBox="0 0 24 24" fill="none"
+           stroke="var(--c-cyan)" stroke-width="1.6" stroke-linejoin="round">
+        <polyline points="7,0 11,5 14,10 14,15 11,21 7,24 3,21 0,15 0,10 3,5 7,0"/>
+      </svg>
       <div class="el f36" data-id="main.humidity" style="left:184px;top:123px;width:112px;color:var(--c-white)">68</div>
       <div class="el f16" data-id="main.humidity-unit" style="left:184px;top:172px;width:112px;color:var(--c-cyan)">%</div>
 
       <!-- 气压卡 -->
       <div class="el" data-id="main.card-pressure" style="left:322px;top:77px;width:140px;height:117px;border-radius:17px;border:1px solid var(--c-edge);background:linear-gradient(to bottom,var(--c-panel),#0C2440)"></div>
-      <div class="el" data-id="main.pressure-accent" style="left:336px;top:88px;width:32px;height:3px;border-radius:2px;background:var(--c-green)"></div>
-      <div class="el f16" data-id="main.pressure-label" style="left:336px;top:99px;width:112px;color:var(--c-muted)">气压</div>
+      <svg class="el" data-id="main.pressure-icon" style="left:336px;top:89px;width:24px;height:24px" viewBox="0 0 24 24" fill="none"
+           stroke="var(--c-green)" stroke-width="1.6" stroke-linecap="round">
+        <path d="M5 19 A10 10 0 1 1 19 19"/>
+        <line x1="12" y1="12" x2="19" y2="4"/>
+      </svg>
       <div class="el f36" data-id="main.pressure" style="left:336px;top:123px;width:112px;color:var(--c-white)">101.3</div>
       <div class="el f16" data-id="main.pressure-unit" style="left:336px;top:172px;width:112px;color:var(--c-green)">kPa</div>
 
-      <!-- OTA 状态条 -->
-      <div class="el" data-id="main.ota-panel" style="left:18px;top:201px;width:322px;height:45px;border-radius:12px;border:1px solid var(--c-edge);background:var(--c-panel2)"></div>
-      <div class="el f16" data-id="main.ota-label" style="left:30px;top:206px;width:88px;color:var(--c-muted)">系统更新</div>
-      <div class="el f16" data-id="main.ota-text" style="left:131px;top:206px;width:194px;color:var(--c-white)">等待更新</div>
-      <div class="el" data-id="main.ota-bar" style="left:30px;top:237px;width:295px;height:4px;border-radius:2px;background:var(--c-ota-track)"></div>
-      <div class="el" data-id="main.ota-fill" style="left:30px;top:237px;width:0;height:4px;border-radius:2px;background:var(--c-cyan)"></div>
-
-      <!-- 重新配网按钮 -->
-      <div class="el" data-id="main.setup-btn" style="left:350px;top:201px;width:112px;height:45px;border-radius:12px;border:1px solid var(--c-btn-edge);background:var(--c-btn)"></div>
-      <div class="el f16" data-id="main.setup-text" style="left:366px;top:214px;width:92px;color:var(--c-white)">重新配网</div>
+      <!-- OTA 状态条：默认隐藏，只有升级时才出现（工具栏「OTA 演示」可预览） -->
+      <div id="ota-wrap" style="position:absolute;inset:0;display:none">
+        <div class="el" data-id="main.ota-panel" style="left:18px;top:201px;width:444px;height:45px;border-radius:12px;border:1px solid var(--c-edge);background:var(--c-panel2)"></div>
+        <div class="el f16" data-id="main.ota-label" style="left:30px;top:206px;width:88px;color:var(--c-muted)">系统更新</div>
+        <div class="el f16" data-id="main.ota-text" style="left:131px;top:206px;width:300px;color:var(--c-white)">下载并写入 42%</div>
+        <div class="el" data-id="main.ota-bar" style="left:30px;top:237px;width:420px;height:4px;border-radius:2px;background:var(--c-ota-track)"></div>
+        <div class="el" data-id="main.ota-fill" style="left:30px;top:237px;width:176px;height:4px;border-radius:2px;background:var(--c-cyan)"></div>
+      </div>
       <div class="el f16" data-id="main.error" style="left:18px;top:249px;width:440px;color:var(--c-amber)"></div>
     </div></div>
 
@@ -294,6 +299,13 @@
 
   document.getElementById('btn-panel').onclick = function(){
     document.body.classList.toggle('panel-open');
+  };
+
+  document.getElementById('btn-ota').onclick = function(){
+    const wrap = document.getElementById('ota-wrap');
+    const show = wrap.style.display === 'none' || !wrap.style.display;
+    wrap.style.display = show ? 'block' : 'none';
+    this.classList.toggle('active', show);
   };
 
   document.getElementById('btn-add').onclick = function(){

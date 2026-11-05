@@ -28,7 +28,7 @@ tshell (prio 20, 4 KB) / lwIP TCP (prio 10, 2 KB)
        scan(STA 态，≤10s) → wifi_off → wifi_on(AP) → start_ap → dhcpd_start
        :80 HTTP 配网页 + :53 DNS 应答(192.168.4.1) + HTTP 探测重定向
        收到 POST /wifi → 校验表单 → 回 connecting 页 → 关 socket/DHCPD → join
-  → 在线期间每 1 s 检查链路；掉线或用户点「重新配网」→ 回配网
+  → 在线期间每 1 s 检查链路；掉线自动开热点回配网（串口 netapp_setup 可手动触发），OTA 期间不切换网络
 ```
 
 保存：`/data/wifi.cfg`（LittleFS，明文，`magic + ssid + password`），临时文件 fsync 后 rename。**不会打印路由器密码**。

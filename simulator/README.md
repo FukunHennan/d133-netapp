@@ -34,7 +34,8 @@ SDK 不在默认位置时用 `-DLUBAN_LITE_DIR=<SDK 路径>` 指定。
 ```powershell
 .\build\d133_preview.exe --page boot   # 启动页
 .\build\d133_preview.exe --page ap     # 配网热点页
-.\build\d133_preview.exe --page main   # 传感器主页
+.\build\d133_preview.exe --page main   # 传感器主页（OTA 面板隐藏）
+.\build\d133_preview.exe --page ota    # 主页 + 42% 的 OTA 进度演示
 ```
 
 关闭窗口退出。`main.c` 里的网络和传感器数值是示例数据，只用于把三页填满。

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 36 px
  * Bpp: 4
- * Opts: --font C:\Users\chenfukun\Desktop\D133\fonts_src\_static.ttf --size 36 --bpp 4 --format lvgl --no-compress --lv-include lvgl.h --lv-font-name ui_font_36 --symbols -.0123456789 -o C:\Users\chenfukun\Desktop\D133\luban-lite\application\rt-thread\helloworld\netapp\ui\ui_font_36.c
+ * Opts: --font C:\Users\chenfukun\Desktop\D133\d133-netapp\fonts_src\_static.ttf --size 36 --bpp 4 --format lvgl --no-compress --lv-include lvgl.h --lv-font-name ui_font_36 --symbols -.0123456789 -o C:\Users\chenfukun\Desktop\D133\d133-netapp\firmware\application\rt-thread\helloworld\netapp\ui\ui_font_36.c
  ******************************************************************************/
 
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE

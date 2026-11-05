@@ -40,7 +40,16 @@ int main(int argc, char **argv)
         state.wifi = "Connected";
         state.ssid = "Home-WiFi";
         state.ip = "192.168.1.106";
-        state.ota = "等待更新";
+        state.ota = "Idle";
+        state.online = 1;
+        ui_app_set_sensor_text("25.6", "68", "101.3", "示例数据");
+        ui_app_update(&state);
+    } else if (!strcmp(page, "ota")) {
+        state.wifi = "Connected";
+        state.ssid = "Home-WiFi";
+        state.ip = "192.168.1.106";
+        state.ota = "Downloading / flashing";
+        state.ota_percent = 42;
         state.online = 1;
         ui_app_set_sensor_text("25.6", "68", "101.3", "示例数据");
         ui_app_update(&state);
