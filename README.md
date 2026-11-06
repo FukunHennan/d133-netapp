@@ -28,11 +28,34 @@
 ├─ simulator/                    # LVGL 桌面模拟器（源码 + 截图）
 ├─ preview/                      # 手机配网页的 HTML 预览与早期设计稿
 ├─ fonts_src/                    # Noto Sans SC 字体源（OFL）与子集脚本
-├─ docs/                         # 构建、烧录、架构、界面调试说明
+├─ release/                      # 各版本发布元数据（SHA256SUMS、OTA manifest、发布说明）
+├─ tools/                        # publish-release.ps1 等工具脚本
+├─ docs/                         # 构建、烧录、架构、界面调试、封箱部署方案
 └─ setup.ps1                     # 克隆 SDK → 叠加本项目 → 可选编译
 ```
 
 **本仓库不包含**：luban-lite SDK 本体（约 1.9 GB，厂商预编译库和工具链压缩包）、构建产物（`output/`、`build/`）、烧录与设计工具安装包。SDK 由 `setup.ps1` 从 gitee 拉取到固定 commit 后叠加本仓库内容，保证可复现。
+
+## 下载固件（Release）
+
+编译好的二进制不放进 git 历史，统一作为 **GitHub Release 资产**发布：
+
+**<https://github.com/FukunHennan/d133-netapp/releases/latest>**
+
+| 资产 | 大小 | 用途 |
+|---|---|---|
+| `d13x_JLC_v1.1.0.img` | 10,905,600 B | 出厂/返修 **USB 整片烧录**（AiBurn GUI → Burn online） |
+| `ota.cpio` | 1,666,048 B | **无线/网页 OTA** 升级包（CRC32 `E4AF3CAC`） |
+| `SHA256SUMS.txt` / `ota_manifest.json` | — | 下载校验 / 填升级页 CRC |
+
+封箱设备的完整出厂与升级流程见 **[docs/deployment.md](docs/deployment.md)**（含验收清单）。
+
+发布新版本：
+
+```powershell
+.\tools\publish-release.ps1 -Version v1.1.1 -Build
+```
+
 
 ## 快速开始
 

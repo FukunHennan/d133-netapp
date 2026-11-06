@@ -1,0 +1,9 @@
+Section,Size,Unused
+.text,1231360,1050
+.eh_frame,100,0
+.rodata,409800,3692
+.data,21676,65
+.bss,193008,229
+._sram_s0_sw_heap,512,512
+.riscv.attributes,95,0
+Total,1856551,5548
